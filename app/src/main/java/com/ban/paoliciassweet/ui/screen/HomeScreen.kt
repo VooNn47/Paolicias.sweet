@@ -1,8 +1,10 @@
 package com.ban.paoliciassweet.ui.screen
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,6 +15,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -32,37 +37,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ban.paoliciassweet.R
+import com.ban.paoliciassweet.data.local.entity.ProductoEntity
 import com.ban.paoliciassweet.ui.components.BarraInferior
 import com.ban.paoliciassweet.ui.theme.BanqueteriaTheme
 import com.ban.paoliciassweet.ui.theme.BlancoHueso
 import com.ban.paoliciassweet.ui.theme.Burdeos
 import com.ban.paoliciassweet.ui.theme.Dorado
 import com.ban.paoliciassweet.ui.theme.MarronSuave
+import com.ban.paoliciassweet.ui.util.formatoPrecio
+import com.ban.paoliciassweet.ui.util.rememberImagenProducto
 import com.ban.paoliciassweet.ui.viewmodel.HomeViewModel
 
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    onProductoClick: (Int) -> Unit,
     onNavigateToReserva: () -> Unit,
     onNavigateToAgenda: () -> Unit,
     onNavigateToPerfil: () -> Unit,
 ) {
     Scaffold(
         topBar = {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(BlancoHueso)
                     .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                contentAlignment = Alignment.Center
             ) {
-                Spacer(modifier = Modifier.size(60.dp))
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "Paolicias.Sweet",
                         fontFamily = FontFamily.Cursive,
@@ -74,11 +77,6 @@ fun HomeScreen(
                         fontSize = 18.sp
                     )
                 }
-                Image(
-                    painter = painterResource(id = R.drawable.carro),
-                    contentDescription = "logo de carro de compras",
-                    modifier = Modifier.size(60.dp)
-                )
             }
         },
         bottomBar = {
@@ -103,68 +101,65 @@ fun HomeScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+            // Categorías que salen de la base de datos
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                BotonCategoria("Todos") { viewModel.onCategoriaChanged("Todos") }
-                BotonCategoria("Tortas") { viewModel.onCategoriaChanged("Tortas") }
-                BotonCategoria("Pasteles") { viewModel.onCategoriaChanged("Pasteles") }
-                BotonCategoria("Postres") { viewModel.onCategoriaChanged("Postres") }
+                items(viewModel.categorias) { categoria ->
+                    BotonCategoria(
+                        texto = categoria,
+                        seleccionada = viewModel.uiState.categoria == categoria
+                    ) { viewModel.onCategoriaChanged(categoria) }
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                if (viewModel.mostrarProducto("Torta Frutos Rojos", "Tortas")) {
-                    ProductoCard(
-                        nombre = "Torta Frutos Rojos",
-                        descripcion = "Torta bizcocho vainilla con crema y frutos rojos.",
-                        precio = "$45.000",
-                        imagen = R.drawable.tortafrutosrojos,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    )
-                }
-                if (viewModel.mostrarProducto("Cheesecake Arandanos", "Postres")) {
-                    ProductoCard(
-                        nombre = "Cheesecake Arandanos",
-                        descripcion = "Cheesecake cremoso con coulds de arandanos.",
-                        precio = "$38.000",
-                        imagen = R.drawable.cheskake,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    )
+            val lista = viewModel.productosFiltrados
+
+            if (lista.isEmpty()) {
+                Text(
+                    text = "No hay productos para mostrar.",
+                    color = MarronSuave,
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(lista, key = { it.id }) { producto ->
+                        ProductoCard(
+                            producto = producto,
+                            onClick = { onProductoClick(producto.id) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-// Botón redondeado de categoría (Todos, Tortas, Pasteles, Postres)
+// Botón redondeado de categoría
 @Composable
 private fun BotonCategoria(
     texto: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit = {}
+    seleccionada: Boolean,
+    onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(36.dp),
+        modifier = Modifier.height(36.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Burdeos,
+            containerColor = if (seleccionada) Burdeos else MarronSuave,
             contentColor = Color.White
         ),
         border = BorderStroke(1.dp, Dorado),
         shape = CircleShape,
-        contentPadding = PaddingValues(horizontal = 12.dp)
+        contentPadding = PaddingValues(horizontal = 14.dp)
     ) {
         Text(
             text = texto,
@@ -174,37 +169,45 @@ private fun BotonCategoria(
     }
 }
 
-// Card de un producto: imagen arriba, nombre, descripción y precio
+// Tarjeta de un producto: al tocarla se abre el detalle
 @Composable
 private fun ProductoCard(
-    nombre: String,
-    descripcion: String,
-    precio: String,
-    imagen: Int,
+    producto: ProductoEntity,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = BlancoHueso),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
             Image(
-                painter = painterResource(id = imagen),
-                contentDescription = nombre,
+                painter = painterResource(id = rememberImagenProducto(producto.imagen)),
+                contentDescription = producto.nombre,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(110.dp)
+                    .height(140.dp)
             )
             Column(modifier = Modifier.padding(8.dp)) {
-                Text(text = nombre, fontWeight = FontWeight.Bold)
-                Text(text = descripcion, fontSize = 12.sp, color = MarronSuave)
-                Text(
-                    text = precio,
-                    color = Burdeos,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = producto.nombre, fontWeight = FontWeight.Bold)
+                Text(text = producto.descripcion, fontSize = 12.sp, color = MarronSuave)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = formatoPrecio(producto.precio),
+                        color = Burdeos,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (producto.porciones > 1) "Rinde ${producto.porciones} personas" else "Por porción",
+                        fontSize = 12.sp,
+                        color = MarronSuave
+                    )
+                }
             }
         }
     }
@@ -217,6 +220,7 @@ fun HomeScreenPreview() {
     BanqueteriaTheme {
         HomeScreen(
             viewModel = HomeViewModel(),
+            onProductoClick = {},
             onNavigateToReserva = {},
             onNavigateToAgenda = {},
             onNavigateToPerfil = {}
