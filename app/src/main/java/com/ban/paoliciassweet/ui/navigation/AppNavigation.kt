@@ -7,9 +7,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.ban.paoliciassweet.model.Sesion
 import com.ban.paoliciassweet.ui.screen.AgendaScreen
 import com.ban.paoliciassweet.ui.screen.BanqueteriaScreen
@@ -17,6 +19,7 @@ import com.ban.paoliciassweet.ui.screen.HomeScreen
 import com.ban.paoliciassweet.ui.screen.LoginScreen
 import com.ban.paoliciassweet.ui.screen.PanelAdminScreen
 import com.ban.paoliciassweet.ui.screen.PerfilScreen
+import com.ban.paoliciassweet.ui.screen.ProductoDetalleScreen
 import com.ban.paoliciassweet.ui.screen.RegisterScreen
 import com.ban.paoliciassweet.ui.screen.ReservaScreen
 import com.ban.paoliciassweet.ui.viewmodel.AgendaViewmodel
@@ -33,6 +36,8 @@ object Routes {
     const val RESERVA = "Reserva"
     const val PERFIL = "Perfil"
     const val ADMIN = "Admin"
+
+    const val PRODUCTO = "producto/{id}"
 }
 
 @Composable
@@ -97,28 +102,27 @@ fun AppNavigation() {
         }
 
         composable(Routes.HOME) {
+            val context = LocalContext.current
             val homeViewModel: HomeViewModel = viewModel()
+
+            LaunchedEffect(Unit) { homeViewModel.cargarProductos(context) }
 
             HomeScreen(
                 viewModel = homeViewModel,
-                onNavigateToReserva = {
-                    scope.launch {
-                        delay(demora)
-                        navController.navigate(Routes.RESERVA) { launchSingleTop = true }
-                    }
-                },
-                onNavigateToAgenda = {
-                    scope.launch {
-                        delay(demora)
-                        navController.navigate(Routes.AGENDA) { launchSingleTop = true }
-                    }
-                },
-                onNavigateToPerfil = {
-                    scope.launch {
-                        delay(demora)
-                        navController.navigate(Routes.PERFIL) { launchSingleTop = true }
-                    }
-                }
+                onProductoClick = { id -> navController.navigate("producto/$id") },
+                onNavigateToReserva = {  },
+                onNavigateToAgenda = { },
+                onNavigateToPerfil = {  }
+            )
+        }
+        composable(
+            route = Routes.PRODUCTO,
+            arguments = listOf(navArgument("id") { type = NavType.IntType })
+        ) { entry ->
+            val id = entry.arguments?.getInt("id") ?: 0
+            ProductoDetalleScreen(
+                productoId = id,
+                onVolver = { navController.popBackStack() }
             )
         }
 
