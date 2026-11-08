@@ -9,7 +9,9 @@ import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
 import com.ban.paoliciassweet.data.local.entity.ReservaEntity
 import com.ban.paoliciassweet.model.ReservaModel
+import com.ban.paoliciassweet.model.SeleccionEvento
 import com.ban.paoliciassweet.model.Sesion
+import com.ban.paoliciassweet.ui.util.calcularCotizacion
 import kotlinx.coroutines.launch
 
 class ReservaViewmodel : ViewModel() {
@@ -21,6 +23,9 @@ class ReservaViewmodel : ViewModel() {
         private set
 
     var successMessage by mutableStateOf<String?>(null)
+        private set
+
+    var productosElegidos by mutableStateOf<List<String>>(emptyList())
         private set
 
     fun onNombreEventoChanged(nombre: String) {
@@ -41,6 +46,15 @@ class ReservaViewmodel : ViewModel() {
 
     fun onObservacionesChanged(observaciones: String) {
         uiState = uiState.copy(observaciones = observaciones)
+    }
+
+    fun cargarProductosElegidos(context: Context) {
+        viewModelScope.launch {
+            val dao = AppDatabase.getDatabase(context).productoDao()
+            productosElegidos = SeleccionEvento.productoIds.mapNotNull { id ->
+                dao.obtenerPorId(id)?.nombre
+            }
+        }
     }
 
     fun guardarReserva(context: Context) {
@@ -69,13 +83,20 @@ class ReservaViewmodel : ViewModel() {
         viewModelScope.launch {
             val db = AppDatabase.getDatabase(context)
 
+            val elegidos = SeleccionEvento.productoIds.mapNotNull { id ->
+                db.productoDao().obtenerPorId(id)
+            }
+            val cotizacion = calcularCotizacion(cantidad, elegidos)
+
             val nuevaReserva = ReservaEntity(
                 nombreEvento = state.nombreEvento,
                 fecha = state.fecha,
                 horario = state.horario,
                 invitados = state.invitados.trim(),
                 observaciones = state.observaciones,
-                correoCliente = Sesion.correo
+                correoCliente = Sesion.correo,
+                productos = SeleccionEvento.productoIds.joinToString(","),
+                total = cotizacion.total
             )
 
             db.reservaDao().guardarReserva(nuevaReserva)

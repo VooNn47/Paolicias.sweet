@@ -11,11 +11,30 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -28,7 +47,12 @@ import com.ban.paoliciassweet.ui.components.BarraInferior
 import com.ban.paoliciassweet.ui.components.Header
 import com.ban.paoliciassweet.ui.theme.MarronSuave
 import com.ban.paoliciassweet.ui.viewmodel.ReservaViewmodel
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReservaScreen(
     onNavigateToHome: () -> Unit,
@@ -39,6 +63,68 @@ fun ReservaScreen(
     val uiState = reservaViewModel.uiState
     val context = LocalContext.current
 
+    var mostrarCalendario by remember { mutableStateOf(false) }
+    var mostrarReloj by remember { mutableStateOf(false) }
+
+    // Solo se pueden elegir fechas desde hoy en adelante
+    val hoyUtc = remember {
+        LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    }
+    val datePickerState = rememberDatePickerState(
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                utcTimeMillis >= hoyUtc
+        }
+    )
+    val timePickerState = rememberTimePickerState(
+        initialHour = 12,
+        initialMinute = 0,
+        is24Hour = true
+    )
+
+    LaunchedEffect(Unit) {
+        reservaViewModel.cargarProductosElegidos(context)
+    }
+
+    if (mostrarCalendario) {
+        DatePickerDialog(
+            onDismissRequest = { mostrarCalendario = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val fecha = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneOffset.UTC)
+                            .toLocalDate()
+                            .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                        reservaViewModel.onFechaChanged(fecha)
+                    }
+                    mostrarCalendario = false
+                }) { Text("Aceptar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarCalendario = false }) { Text("Cancelar") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (mostrarReloj) {
+        AlertDialog(
+            onDismissRequest = { mostrarReloj = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val hora = "%02d:%02d".format(timePickerState.hour, timePickerState.minute)
+                    reservaViewModel.onHorarioChanged(hora)
+                    mostrarReloj = false
+                }) { Text("Aceptar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarReloj = false }) { Text("Cancelar") }
+            },
+            text = { TimePicker(state = timePickerState) }
+        )
+    }
 
     Scaffold(
         topBar = { Header(title = "Reservar evento") },
@@ -72,6 +158,23 @@ fun ReservaScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
+            Text(
+                text = "Productos de tu evento",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            if (reservaViewModel.productosElegidos.isEmpty()) {
+                Text(
+                    text = "Aún no has agregado productos. Puedes elegirlos desde el Catálogo.",
+                    fontSize = 14.sp,
+                    color = MarronSuave
+                )
+            } else {
+                reservaViewModel.productosElegidos.forEach { nombre ->
+                    Text(text = "• $nombre", fontSize = 14.sp)
+                }
+            }
+
             OutlinedTextField(
                 value = uiState.nombreEvento,
                 onValueChange = { reservaViewModel.onNombreEventoChanged(it) },
@@ -82,16 +185,34 @@ fun ReservaScreen(
 
             OutlinedTextField(
                 value = uiState.fecha,
-                onValueChange = { reservaViewModel.onFechaChanged(it) },
+                onValueChange = {},
+                readOnly = true,
                 label = { Text("Fecha del evento") },
+                trailingIcon = {
+                    IconButton(onClick = { mostrarCalendario = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.DateRange,
+                            contentDescription = "Elegir fecha"
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
 
             OutlinedTextField(
                 value = uiState.horario,
-                onValueChange = { reservaViewModel.onHorarioChanged(it) },
+                onValueChange = {},
+                readOnly = true,
                 label = { Text("Horario") },
+                trailingIcon = {
+                    IconButton(onClick = { mostrarReloj = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.Schedule,
+                            contentDescription = "Elegir hora"
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -114,7 +235,6 @@ fun ReservaScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-
             if (reservaViewModel.errorMessage != null) {
                 Text(
                     text = reservaViewModel.errorMessage!!,
@@ -135,7 +255,8 @@ fun ReservaScreen(
             Button(
                 onClick = {
                     vibrar(context, 1500L)
-                    reservaViewModel.guardarReserva(context) },
+                    reservaViewModel.guardarReserva(context)
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(50)
             ) {
@@ -144,5 +265,3 @@ fun ReservaScreen(
         }
     }
 }
-
-

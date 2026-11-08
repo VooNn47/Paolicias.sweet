@@ -1,9 +1,13 @@
 package com.ban.paoliciassweet.ui.screen
 
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,9 +24,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -35,8 +42,8 @@ import com.ban.paoliciassweet.ui.theme.BanqueteriaTheme
 import com.ban.paoliciassweet.ui.theme.BlancoHueso
 import com.ban.paoliciassweet.ui.theme.Burdeos
 import com.ban.paoliciassweet.ui.theme.MarronSuave
+import com.ban.paoliciassweet.ui.util.formatoPrecio
 import com.ban.paoliciassweet.ui.viewmodel.AgendaViewmodel
-
 
 @Composable
 fun AgendaScreen(
@@ -47,33 +54,20 @@ fun AgendaScreen(
 ) {
     val reservas = agendaViewmodel.uiState.reserva
     val context = LocalContext.current
-    val invitados = reservas?.invitados?.toIntOrNull() ?: 0
 
-    val precio: Int
+    // El precio ya viene calculado y guardado en la reserva (tarifa + productos)
+    val precio = reservas?.total ?: 0
+    val abono = precio / 2
 
-    if (invitados >= 1 && invitados <= 10) {
-        precio = 30000
-    } else if (invitados >= 11 && invitados <= 20) {
-        precio = 50000
-    } else if (invitados >= 21 && invitados <= 30) {
-        precio = 80000
-    } else if (invitados >= 31 && invitados <= 40) {
-        precio = 100000
-    } else if (invitados >= 41 && invitados <= 50) {
-        precio = 120000
-    } else if (invitados >= 51 && invitados <= 60) {
-        precio = 140000
-    } else if (invitados >= 61 && invitados <= 70) {
-        precio = 160000
-    } else if (invitados >= 71 && invitados <= 80) {
-        precio = 180000
-    } else if (invitados >= 81 && invitados <= 90) {
-        precio = 200000
-    } else if (invitados >= 91 && invitados <= 100) {
-        precio = 220000
-    } else {
-        precio = 0
+    // Selector de imágenes de la galería (no necesita permisos)
+    val selectorImagen = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            agendaViewmodel.guardarComprobante(context, uri)
+        }
     }
+
     Scaffold(
         topBar = { Header(title = "Mi Agenda") },
         bottomBar = {
@@ -160,7 +154,38 @@ fun AgendaScreen(
                             Text(text = "Horario: ${reservas.horario}", fontSize = 15.sp)
                             Text(text = "Invitados: ${reservas.invitados}", fontSize = 15.sp)
                             Text(text = "Observaciones: ${reservas.observaciones}", fontSize = 15.sp)
-                            Text(text = "Precio del evento: $$precio", fontSize = 15.sp)
+                            Text(
+                                text = "Precio del evento: ${formatoPrecio(precio)}",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Abono (50%): ${formatoPrecio(abono)}",
+                                fontSize = 15.sp
+                            )
+                            Text(
+                                text = "Estado del abono: ${reservas.estadoAbono}",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Burdeos
+                            )
+
+                            if (reservas.comprobante.isNotEmpty()) {
+                                val imagen = remember(reservas.comprobante) {
+                                    val opciones = BitmapFactory.Options().apply { inSampleSize = 4 }
+                                    BitmapFactory.decodeFile(reservas.comprobante, opciones)
+                                }
+                                if (imagen != null) {
+                                    Image(
+                                        bitmap = imagen.asImageBitmap(),
+                                        contentDescription = "Comprobante de transferencia",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(160.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -170,21 +195,24 @@ fun AgendaScreen(
 
             Button(
                 onClick = {
-                    if (reservas != null) {
-                        agendaViewmodel.pagarReserva(context, precio)
-                    }
+                    selectorImagen.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
                 },
-                modifier = Modifier.fillMaxWidth(),
-
-                ) {
-                Text(text = "Pagar reserva")
+                enabled = reservas != null && reservas.estadoAbono != "Pagado 50%",
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = if (reservas?.comprobante.isNullOrEmpty()) {
+                        "Adjuntar comprobante"
+                    } else {
+                        "Cambiar comprobante"
+                    }
+                )
             }
         }
     }
 }
-
-
-
 
 @Preview(showBackground = true)
 @Composable

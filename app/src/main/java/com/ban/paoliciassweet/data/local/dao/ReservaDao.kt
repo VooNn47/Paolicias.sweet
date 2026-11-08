@@ -23,4 +23,7 @@ interface ReservaDao {
 
     @Query("UPDATE reservas SET pagada = 1, estadoAbono = 'Pagado' WHERE id = :id AND pagada = 0")
     suspend fun marcarReservaPagada(id: Int): Int
+
+    @Query("UPDATE reservas SET comprobante = :ruta, estadoAbono = 'En revisión' WHERE id = :id")
+    suspend fun adjuntarComprobante(id: Int, ruta: String)
 }

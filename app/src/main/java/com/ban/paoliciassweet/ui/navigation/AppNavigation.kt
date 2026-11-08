@@ -105,14 +105,33 @@ fun AppNavigation() {
             val context = LocalContext.current
             val homeViewModel: HomeViewModel = viewModel()
 
-            LaunchedEffect(Unit) { homeViewModel.cargarProductos(context) }
+            LaunchedEffect(Unit) {
+                homeViewModel.cargarProductos(context)
+            }
 
             HomeScreen(
                 viewModel = homeViewModel,
-                onProductoClick = { id -> navController.navigate("producto/$id") },
-                onNavigateToReserva = {  },
-                onNavigateToAgenda = { },
-                onNavigateToPerfil = {  }
+                onProductoClick = { id ->
+                    navController.navigate("producto/$id")
+                },
+                onNavigateToReserva = {
+                    scope.launch {
+                        delay(demora)
+                        navController.navigate(Routes.RESERVA) { launchSingleTop = true }
+                    }
+                },
+                onNavigateToAgenda = {
+                    scope.launch {
+                        delay(demora)
+                        navController.navigate(Routes.AGENDA) { launchSingleTop = true }
+                    }
+                },
+                onNavigateToPerfil = {
+                    scope.launch {
+                        delay(demora)
+                        navController.navigate(Routes.PERFIL) { launchSingleTop = true }
+                    }
+                }
             )
         }
         composable(

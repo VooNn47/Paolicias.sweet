@@ -14,5 +14,9 @@ data class ReservaEntity(
     val observaciones: String,
     val correoCliente: String = "",
     val estadoAbono: String = "Pendiente",
-    val pagada: Boolean = false
+    val pagada: Boolean = false,
+    val productos: String = "",
+    val total: Int = 0,
+    val comprobante: String = "",
+    val fechaPago: String = ""
 )
