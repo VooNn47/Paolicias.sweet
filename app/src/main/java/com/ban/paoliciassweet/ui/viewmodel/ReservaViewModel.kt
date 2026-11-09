@@ -31,14 +31,14 @@ class ReservaViewmodel : ViewModel() {
     var productosElegidos by mutableStateOf<List<String>>(emptyList())
         private set
 
-    // El ViewModel no habla con Room: pide los datos a los Repository
+
     private fun reservaRepositorio(context: Context) =
         ReservaRepository(AppDatabase.getDatabase(context).reservaDao())
 
     private fun productoRepositorio(context: Context) =
         ProductoRepository(AppDatabase.getDatabase(context).productoDao())
 
-    // Al cambiar un campo se borra solo el error de ese campo
+
     fun onNombreEventoChanged(nombre: String) {
         uiState = uiState.copy(nombreEvento = nombre, nombreEventoError = null)
     }
@@ -71,7 +71,7 @@ class ReservaViewmodel : ViewModel() {
     fun guardarReserva(context: Context) {
         val state = uiState
 
-        // Se validan todos los campos a la vez para mostrar todos los errores juntos
+        
         val nombreError = validarNombreEvento(state.nombreEvento)
         val fechaError = validarFecha(state.fecha)
         val horarioError = validarHorario(state.horario)
@@ -88,7 +88,7 @@ class ReservaViewmodel : ViewModel() {
             return
         }
 
-       
+
         val cantidad = state.invitados.trim().toInt()
 
         viewModelScope.launch {
