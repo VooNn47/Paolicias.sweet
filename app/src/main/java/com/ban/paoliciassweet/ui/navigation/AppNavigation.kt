@@ -150,7 +150,7 @@ fun AppNavigation() {
             val agendaViewmodel: AgendaViewmodel = viewModel()
 
             LaunchedEffect(Unit) {
-                agendaViewmodel.cargarReserva(context)
+                agendaViewmodel.cargarReservas(context)
             }
 
             AgendaScreen(
@@ -224,6 +224,14 @@ fun AppNavigation() {
                         delay(demora)
                         navController.navigate(Routes.RESERVA) { launchSingleTop = true }
                     }
+                },
+                onLogout = {
+                    scope.launch {
+                        delay(demora)
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(Routes.HOME) { inclusive = true }
+                        }
+                    }
                 }
             )
         }
@@ -242,4 +250,3 @@ fun AppNavigation() {
         }
     }
 }
-

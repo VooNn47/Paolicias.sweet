@@ -20,7 +20,7 @@ import com.ban.paoliciassweet.data.local.dao.ProductoDao
         SaldoEntity::class,
         ProductoEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
 import com.ban.paoliciassweet.model.AgendaModel
+import com.ban.paoliciassweet.model.Sesion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
@@ -20,33 +21,23 @@ class AgendaViewmodel : ViewModel() {
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    fun cargarReservas(reservas: AgendaModel) {
-        uiState = reservas
-        errorMessage = null
-    }
-
-    fun mostrarError(mensaje: String) {
-        errorMessage = mensaje
-    }
-
-    fun cargarReserva(context: Context) {
+    // Carga SOLO las reservas del cliente con sesión iniciada (Sesion.correo)
+    fun cargarReservas(context: Context) {
         viewModelScope.launch {
             val db = AppDatabase.getDatabase(context)
-            val reserva = db.reservaDao().obtenerReservas()
+            val lista = db.reservaDao().obtenerReservasPorCliente(Sesion.correo)
 
-            uiState = uiState.copy(reserva = reserva)
+            uiState = uiState.copy(reservas = lista)
         }
     }
 
-    // Copia la imagen elegida al almacenamiento de la app y guarda su ruta en la reserva
-    fun guardarComprobante(context: Context, uri: Uri) {
-        val reserva = uiState.reserva ?: return
 
+    fun guardarComprobante(context: Context, reservaId: Int, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val archivo = File(
                     context.filesDir,
-                    "comprobante_${reserva.id}_${System.currentTimeMillis()}.jpg"
+                    "comprobante_${reservaId}_${System.currentTimeMillis()}.jpg"
                 )
                 context.contentResolver.openInputStream(uri)?.use { entrada ->
                     archivo.outputStream().use { salida ->
@@ -55,38 +46,12 @@ class AgendaViewmodel : ViewModel() {
                 }
 
                 val db = AppDatabase.getDatabase(context)
-                db.reservaDao().adjuntarComprobante(reserva.id, archivo.absolutePath)
+                db.reservaDao().adjuntarComprobante(reservaId, archivo.absolutePath)
 
                 errorMessage = null
-                cargarReserva(context)
+                cargarReservas(context)
             } catch (e: Exception) {
                 errorMessage = "No se pudo guardar el comprobante."
-            }
-        }
-    }
-
-    // (se elimina cuando quitemos el saldo)
-    fun pagarReserva(context: Context, precio: Int) {
-        viewModelScope.launch {
-            val db = AppDatabase.getDatabase(context)
-
-            val saldoGuardado = db.saldoDao().obtenerSaldo()
-
-            if (saldoGuardado != null && saldoGuardado.monto >= precio) {
-                val reserva = uiState.reserva
-
-                if (reserva != null && !reserva.pagada) {
-                    val resultado = db.saldoDao().descontarSaldo(precio)
-
-                    if (resultado > 0) {
-                        db.reservaDao().marcarReservaPagada(reserva.id)
-                        cargarReserva(context)
-                    }
-                } else {
-                    errorMessage = "La reserva ya está pagada o no existe."
-                }
-            } else {
-                errorMessage = "No tienes saldo suficiente para pagar la reserva."
             }
         }
     }

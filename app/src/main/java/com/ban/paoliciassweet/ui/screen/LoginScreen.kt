@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,9 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ban.paoliciassweet.ui.components.CampoValidado
 import com.ban.paoliciassweet.ui.components.Footer
 import com.ban.paoliciassweet.ui.components.Header
 import com.ban.paoliciassweet.ui.viewmodel.LoginViewModel
@@ -53,27 +51,26 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            OutlinedTextField(
+            CampoValidado(
                 value = state.email,
                 onValueChange = { viewModel.onEmailChanged(it) },
-                label = { Text("Correo Electrónico") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxWidth()
+                label = "Correo Electrónico",
+                error = state.emailError,
+                keyboardType = KeyboardType.Email
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            CampoValidado(
                 value = state.password,
                 onValueChange = { viewModel.onPasswordChanged(it) },
-                label = { Text("Contraseña") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth()
+                label = "Contraseña",
+                error = state.passwordError,
+                keyboardType = KeyboardType.Password,
+                esClave = true
             )
 
+            // Error general: el correo y la contraseña tienen formato válido pero no coinciden con una cuenta
             if (viewModel.errorMessage != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(

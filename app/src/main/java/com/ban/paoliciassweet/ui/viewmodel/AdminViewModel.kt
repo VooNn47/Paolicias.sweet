@@ -10,6 +10,8 @@ import com.ban.paoliciassweet.data.local.database.AppDatabase
 import com.ban.paoliciassweet.data.local.entity.ReservaEntity
 import com.ban.paoliciassweet.model.PanelAdminModel
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class AdminViewModel : ViewModel() {
 
@@ -35,10 +37,21 @@ class AdminViewModel : ViewModel() {
         }
     }
 
-    fun cambiarEstado(context: Context, id: Int, nuevoEstado: String) {
+    // Acepta el comprobante: estado "Pagado 50%" y fecha de hoy como fechaPago (dd/MM/yyyy)
+    fun validarAbono(context: Context, id: Int) {
         viewModelScope.launch {
             val db = AppDatabase.getDatabase(context)
-            db.reservaDao().actualizarEstado(id, nuevoEstado)
+            val hoy = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+            db.reservaDao().validarAbono(id, hoy)
+            reservas = db.reservaDao().obtenerTodas()
+        }
+    }
+
+    // Rechaza el comprobante: vuelve a "Pendiente" y el cliente debe adjuntar otro
+    fun rechazarAbono(context: Context, id: Int) {
+        viewModelScope.launch {
+            val db = AppDatabase.getDatabase(context)
+            db.reservaDao().rechazarAbono(id)
             reservas = db.reservaDao().obtenerTodas()
         }
     }

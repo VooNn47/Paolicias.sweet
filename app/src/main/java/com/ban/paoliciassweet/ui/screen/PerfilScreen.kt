@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ban.paoliciassweet.R
+import com.ban.paoliciassweet.model.SeleccionEvento
 import com.ban.paoliciassweet.model.Sesion
 import com.ban.paoliciassweet.ui.components.BarraInferior
 import com.ban.paoliciassweet.ui.components.Header
@@ -52,6 +54,7 @@ fun PerfilScreen(
     onNavigateToHome: () -> Unit = {},
     onNavigateToAgenda: () -> Unit = {},
     onNavigateToReserva: () -> Unit = {},
+    onLogout: () -> Unit = {},
     viewModel: PerfilViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -152,6 +155,21 @@ fun PerfilScreen(
                         }
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Cierra la sesión: borra los datos en memoria y vuelve al login
+            Button(
+                onClick = {
+                    Sesion.correo = ""
+                    Sesion.esAdmin = false
+                    SeleccionEvento.limpiar()
+                    onLogout()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Cerrar sesión")
             }
         }
     }
