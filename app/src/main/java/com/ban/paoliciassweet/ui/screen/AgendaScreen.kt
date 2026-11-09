@@ -4,6 +4,9 @@ import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,6 +53,11 @@ import com.ban.paoliciassweet.ui.theme.Burdeos
 import com.ban.paoliciassweet.ui.theme.MarronSuave
 import com.ban.paoliciassweet.ui.util.formatoPrecio
 import com.ban.paoliciassweet.ui.viewmodel.AgendaViewmodel
+
+// Colores del texto "Estado del abono" según el estado (la animación viaja entre ellos)
+private val ColorPendiente = Burdeos
+private val ColorEnRevision = Color(0xFFB26A00)
+private val ColorPagado = Color(0xFF2E7D32)
 
 @Composable
 fun AgendaScreen(
@@ -176,6 +184,17 @@ private fun TarjetaReserva(
     val precio = reserva.total
     val abono = precio / 2
 
+    // ANIMACIÓN 1: el color del estado cambia de forma gradual (600 ms) en vez de saltar
+    val colorEstado by animateColorAsState(
+        targetValue = when (reserva.estadoAbono) {
+            "Pagado 50%", "Completado" -> ColorPagado
+            "En revisión" -> ColorEnRevision
+            else -> ColorPendiente
+        },
+        animationSpec = tween(durationMillis = 600),
+        label = "colorEstado"
+    )
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -209,14 +228,19 @@ private fun TarjetaReserva(
                 text = "Estado del abono: ${reserva.estadoAbono}",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = Burdeos
+                color = colorEstado
             )
 
-            if (reserva.comprobante.isNotEmpty()) {
-                val imagen = remember(reserva.comprobante) {
+            // ANIMACIÓN 2: la imagen del comprobante aparece con fundido y expansión
+            val imagen = remember(reserva.comprobante) {
+                if (reserva.comprobante.isEmpty()) {
+                    null
+                } else {
                     val opciones = BitmapFactory.Options().apply { inSampleSize = 4 }
                     BitmapFactory.decodeFile(reserva.comprobante, opciones)
                 }
+            }
+            AnimatedVisibility(visible = imagen != null) {
                 if (imagen != null) {
                     Image(
                         bitmap = imagen.asImageBitmap(),

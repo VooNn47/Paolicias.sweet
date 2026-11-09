@@ -39,3 +39,33 @@ fun validarRepetirClave(clave: String, repetida: String): String? {
         else -> null
     }
 }
+
+// ---- Formulario de reserva ----
+
+fun validarNombreEvento(nombre: String): String? {
+    val limpio = nombre.trim()
+    return when {
+        limpio.isEmpty() -> "Ingresa el nombre del evento"
+        limpio.length < 3 -> "El nombre del evento debe tener al menos 3 letras"
+        else -> null
+    }
+}
+
+fun validarFecha(fecha: String): String? {
+    return if (fecha.isBlank()) "Elige la fecha del evento" else null
+}
+
+fun validarHorario(horario: String): String? {
+    return if (horario.isBlank()) "Elige el horario del evento" else null
+}
+
+fun validarInvitados(invitados: String): String? {
+    val limpio = invitados.trim()
+    val cantidad = limpio.toIntOrNull()
+    return when {
+        limpio.isEmpty() -> "Ingresa la cantidad de invitados"
+        cantidad == null || !limpio.all { it.isDigit() } -> "Ingresa solo números"
+        cantidad < 1 || cantidad > 100 -> "Los invitados deben ser entre 1 y 100"
+        else -> null
+    }
+}

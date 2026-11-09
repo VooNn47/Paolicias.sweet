@@ -12,14 +12,15 @@ import com.ban.paoliciassweet.model.ReservaModel
 import com.ban.paoliciassweet.model.SeleccionEvento
 import com.ban.paoliciassweet.model.Sesion
 import com.ban.paoliciassweet.ui.util.calcularCotizacion
+import com.ban.paoliciassweet.ui.util.validarFecha
+import com.ban.paoliciassweet.ui.util.validarHorario
+import com.ban.paoliciassweet.ui.util.validarInvitados
+import com.ban.paoliciassweet.ui.util.validarNombreEvento
 import kotlinx.coroutines.launch
 
 class ReservaViewmodel : ViewModel() {
 
     var uiState by mutableStateOf(ReservaModel())
-        private set
-
-    var errorMessage by mutableStateOf<String?>(null)
         private set
 
     var successMessage by mutableStateOf<String?>(null)
@@ -28,20 +29,21 @@ class ReservaViewmodel : ViewModel() {
     var productosElegidos by mutableStateOf<List<String>>(emptyList())
         private set
 
+    // Al cambiar un campo se borra solo el error de ese campo
     fun onNombreEventoChanged(nombre: String) {
-        uiState = uiState.copy(nombreEvento = nombre)
+        uiState = uiState.copy(nombreEvento = nombre, nombreEventoError = null)
     }
 
     fun onFechaChanged(fecha: String) {
-        uiState = uiState.copy(fecha = fecha)
+        uiState = uiState.copy(fecha = fecha, fechaError = null)
     }
 
     fun onHorarioChanged(horario: String) {
-        uiState = uiState.copy(horario = horario)
+        uiState = uiState.copy(horario = horario, horarioError = null)
     }
 
     fun onInvitadosChanged(invitados: String) {
-        uiState = uiState.copy(invitados = invitados)
+        uiState = uiState.copy(invitados = invitados, invitadosError = null)
     }
 
     fun onObservacionesChanged(observaciones: String) {
@@ -60,25 +62,25 @@ class ReservaViewmodel : ViewModel() {
     fun guardarReserva(context: Context) {
         val state = uiState
 
-        // Validar campos obligatorios
-        if (
-            state.nombreEvento.isBlank() ||
-            state.fecha.isBlank() ||
-            state.horario.isBlank() ||
-            state.invitados.isBlank()
-        ) {
-            errorMessage = "Favor completar todos los campos obligatorios."
+        // Se validan todos los campos a la vez para mostrar todos los errores juntos
+        val nombreError = validarNombreEvento(state.nombreEvento)
+        val fechaError = validarFecha(state.fecha)
+        val horarioError = validarHorario(state.horario)
+        val invitadosError = validarInvitados(state.invitados)
+
+        if (nombreError != null || fechaError != null || horarioError != null || invitadosError != null) {
+            uiState = state.copy(
+                nombreEventoError = nombreError,
+                fechaError = fechaError,
+                horarioError = horarioError,
+                invitadosError = invitadosError
+            )
             successMessage = null
             return
         }
 
-        // Validar que los invitados sean un número entre 1 y 100
-        val cantidad = state.invitados.trim().toIntOrNull()
-        if (cantidad == null || cantidad < 1 || cantidad > 100) {
-            errorMessage = "Los invitados deben ser un número entre 1 y 100."
-            successMessage = null
-            return
-        }
+        // Ya validado: invitados es un número entre 1 y 100
+        val cantidad = state.invitados.trim().toInt()
 
         viewModelScope.launch {
             val db = AppDatabase.getDatabase(context)
@@ -101,7 +103,6 @@ class ReservaViewmodel : ViewModel() {
 
             db.reservaDao().guardarReserva(nuevaReserva)
 
-            errorMessage = null
             successMessage = "¡Reserva guardada exitosamente!"
         }
     }

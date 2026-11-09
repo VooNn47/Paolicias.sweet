@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -44,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ban.paoliciassweet.ui.components.BarraInferior
+import com.ban.paoliciassweet.ui.components.CampoValidado
 import com.ban.paoliciassweet.ui.components.Header
 import com.ban.paoliciassweet.ui.theme.MarronSuave
 import com.ban.paoliciassweet.ui.viewmodel.ReservaViewmodel
@@ -175,57 +175,51 @@ fun ReservaScreen(
                 }
             }
 
-            OutlinedTextField(
+            CampoValidado(
                 value = uiState.nombreEvento,
                 onValueChange = { reservaViewModel.onNombreEventoChanged(it) },
-                label = { Text("Nombre del evento") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                label = "Nombre del evento",
+                error = uiState.nombreEventoError
             )
 
-            OutlinedTextField(
+            CampoValidado(
                 value = uiState.fecha,
                 onValueChange = {},
+                label = "Fecha del evento",
+                error = uiState.fechaError,
                 readOnly = true,
-                label = { Text("Fecha del evento") },
-                trailingIcon = {
+                iconoAccion = {
                     IconButton(onClick = { mostrarCalendario = true }) {
                         Icon(
                             imageVector = Icons.Filled.DateRange,
                             contentDescription = "Elegir fecha"
                         )
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                }
             )
 
-            OutlinedTextField(
+            CampoValidado(
                 value = uiState.horario,
                 onValueChange = {},
+                label = "Horario",
+                error = uiState.horarioError,
                 readOnly = true,
-                label = { Text("Horario") },
-                trailingIcon = {
+                iconoAccion = {
                     IconButton(onClick = { mostrarReloj = true }) {
                         Icon(
                             imageVector = Icons.Filled.Schedule,
                             contentDescription = "Elegir hora"
                         )
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                }
             )
 
-            OutlinedTextField(
+            CampoValidado(
                 value = uiState.invitados,
                 onValueChange = { reservaViewModel.onInvitadosChanged(it) },
-                label = { Text("Cantidad de invitados") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
-                ),
-                singleLine = true
+                label = "Cantidad de invitados",
+                error = uiState.invitadosError,
+                keyboardType = KeyboardType.Number
             )
 
             OutlinedTextField(
@@ -234,14 +228,6 @@ fun ReservaScreen(
                 label = { Text("Observaciones") },
                 modifier = Modifier.fillMaxWidth()
             )
-
-            if (reservaViewModel.errorMessage != null) {
-                Text(
-                    text = reservaViewModel.errorMessage!!,
-                    color = Color.Red,
-                    fontSize = 14.sp
-                )
-            }
 
             if (reservaViewModel.successMessage != null) {
                 Text(
