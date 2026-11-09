@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
+import com.ban.paoliciassweet.data.repository.ReservaRepository
 import com.ban.paoliciassweet.model.AgendaModel
 import com.ban.paoliciassweet.model.Sesion
 import kotlinx.coroutines.Dispatchers
@@ -21,11 +22,14 @@ class AgendaViewmodel : ViewModel() {
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    // Carga SOLO las reservas del cliente con sesión iniciada (Sesion.correo)
+
+    private fun repositorio(context: Context) =
+        ReservaRepository(AppDatabase.getDatabase(context).reservaDao())
+
+
     fun cargarReservas(context: Context) {
         viewModelScope.launch {
-            val db = AppDatabase.getDatabase(context)
-            val lista = db.reservaDao().obtenerReservasPorCliente(Sesion.correo)
+            val lista = repositorio(context).obtenerPorCliente(Sesion.correo)
 
             uiState = uiState.copy(reservas = lista)
         }
@@ -45,8 +49,7 @@ class AgendaViewmodel : ViewModel() {
                     }
                 }
 
-                val db = AppDatabase.getDatabase(context)
-                db.reservaDao().adjuntarComprobante(reservaId, archivo.absolutePath)
+                repositorio(context).adjuntarComprobante(reservaId, archivo.absolutePath)
 
                 errorMessage = null
                 cargarReservas(context)

@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
+import com.ban.paoliciassweet.data.repository.UserRepository
 import com.ban.paoliciassweet.model.LoginModel
 import com.ban.paoliciassweet.model.Sesion
 import com.ban.paoliciassweet.ui.util.validarCorreo
@@ -20,6 +21,10 @@ class LoginViewModel : ViewModel() {
     // Error general (credenciales incorrectas); los errores por campo van en uiState
     var errorMessage by mutableStateOf<String?>(null)
         private set
+
+    // El ViewModel no habla con Room: pide los datos al Repository
+    private fun repositorio(context: Context) =
+        UserRepository(AppDatabase.getDatabase(context).userDao())
 
     fun onEmailChanged(email: String) {
         uiState = uiState.copy(email = email, emailError = null)
@@ -48,8 +53,7 @@ class LoginViewModel : ViewModel() {
         val password = state.password
 
         viewModelScope.launch {
-            val db = AppDatabase.getDatabase(context)
-            val user = db.userDao().getUserByEmail(email)
+            val user = repositorio(context).buscarPorCorreo(email)
 
             if (user != null && user.password == password) {
                 errorMessage = null

@@ -8,6 +8,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
 import com.ban.paoliciassweet.data.local.entity.ReservaEntity
+import com.ban.paoliciassweet.data.repository.ProductoRepository
+import com.ban.paoliciassweet.data.repository.ReservaRepository
 import com.ban.paoliciassweet.model.ReservaModel
 import com.ban.paoliciassweet.model.SeleccionEvento
 import com.ban.paoliciassweet.model.Sesion
@@ -28,6 +30,13 @@ class ReservaViewmodel : ViewModel() {
 
     var productosElegidos by mutableStateOf<List<String>>(emptyList())
         private set
+
+    // El ViewModel no habla con Room: pide los datos a los Repository
+    private fun reservaRepositorio(context: Context) =
+        ReservaRepository(AppDatabase.getDatabase(context).reservaDao())
+
+    private fun productoRepositorio(context: Context) =
+        ProductoRepository(AppDatabase.getDatabase(context).productoDao())
 
     // Al cambiar un campo se borra solo el error de ese campo
     fun onNombreEventoChanged(nombre: String) {
@@ -52,9 +61,9 @@ class ReservaViewmodel : ViewModel() {
 
     fun cargarProductosElegidos(context: Context) {
         viewModelScope.launch {
-            val dao = AppDatabase.getDatabase(context).productoDao()
+            val repo = productoRepositorio(context)
             productosElegidos = SeleccionEvento.productoIds.mapNotNull { id ->
-                dao.obtenerPorId(id)?.nombre
+                repo.obtenerPorId(id)?.nombre
             }
         }
     }
@@ -79,14 +88,12 @@ class ReservaViewmodel : ViewModel() {
             return
         }
 
-        // Ya validado: invitados es un número entre 1 y 100
+       
         val cantidad = state.invitados.trim().toInt()
 
         viewModelScope.launch {
-            val db = AppDatabase.getDatabase(context)
-
             val elegidos = SeleccionEvento.productoIds.mapNotNull { id ->
-                db.productoDao().obtenerPorId(id)
+                productoRepositorio(context).obtenerPorId(id)
             }
             val cotizacion = calcularCotizacion(cantidad, elegidos)
 
@@ -101,7 +108,7 @@ class ReservaViewmodel : ViewModel() {
                 total = cotizacion.total
             )
 
-            db.reservaDao().guardarReserva(nuevaReserva)
+            reservaRepositorio(context).guardar(nuevaReserva)
 
             successMessage = "¡Reserva guardada exitosamente!"
         }

@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
 import com.ban.paoliciassweet.data.local.entity.UserEntity
+import com.ban.paoliciassweet.data.repository.UserRepository
 import com.ban.paoliciassweet.model.RegisterModel
 import com.ban.paoliciassweet.ui.util.validarClave
 import com.ban.paoliciassweet.ui.util.validarCorreo
@@ -18,6 +19,10 @@ import kotlinx.coroutines.launch
 class RegisterViewModel : ViewModel(){
     var uiState by mutableStateOf(RegisterModel())
         private set
+
+    // El ViewModel no habla con Room: pide los datos al Repository
+    private fun repositorio(context: Context) =
+        UserRepository(AppDatabase.getDatabase(context).userDao())
 
     // Al escribir en un campo se borra solo el error de ese campo
     fun onNameChanged(name: String){
@@ -59,8 +64,8 @@ class RegisterViewModel : ViewModel(){
         val correo = state.email.trim().lowercase()
 
         viewModelScope.launch {
-            val db = AppDatabase.getDatabase(context)
-            val existingUser = db.userDao().getUserByEmail(correo)
+            val repo = repositorio(context)
+            val existingUser = repo.buscarPorCorreo(correo)
 
             if(existingUser != null) {
                 uiState = uiState.copy(emailError = "Este correo ya está registrado")
@@ -70,7 +75,7 @@ class RegisterViewModel : ViewModel(){
                     email = correo,
                     password = state.password
                 )
-                db.userDao().registerUser(newUser)
+                repo.registrar(newUser)
                 onSuccess()
             }
         }

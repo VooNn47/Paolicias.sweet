@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
 import com.ban.paoliciassweet.data.local.entity.ProductoEntity
+import com.ban.paoliciassweet.data.repository.ProductoRepository
 import kotlinx.coroutines.launch
 
 class ProductoDetalleViewModel : ViewModel() {
@@ -15,9 +16,13 @@ class ProductoDetalleViewModel : ViewModel() {
     var producto by mutableStateOf<ProductoEntity?>(null)
         private set
 
+
+    private fun repositorio(context: Context) =
+        ProductoRepository(AppDatabase.getDatabase(context).productoDao())
+
     fun cargar(context: Context, id: Int) {
         viewModelScope.launch {
-            producto = AppDatabase.getDatabase(context).productoDao().obtenerPorId(id)
+            producto = repositorio(context).obtenerPorId(id)
         }
     }
 }
