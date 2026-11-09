@@ -71,7 +71,7 @@ class ReservaViewmodel : ViewModel() {
     fun guardarReserva(context: Context) {
         val state = uiState
 
-        
+
         val nombreError = validarNombreEvento(state.nombreEvento)
         val fechaError = validarFecha(state.fecha)
         val horarioError = validarHorario(state.horario)
