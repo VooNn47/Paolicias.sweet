@@ -1,6 +1,7 @@
 package com.ban.paoliciassweet.ui.viewmodel
 
 import android.content.Context
+import com.grupo9.data.api.RetrofitProducto
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -46,13 +47,27 @@ class HomeViewModel : ViewModel() {
     fun cargarProductos(context: Context) {
         job?.cancel()
         job = viewModelScope.launch {
-            val repo = repositorio(context)
-
-
-            repo.cargarProductosIniciales()
-
-            repo.obtenerTodos().collect { lista ->
-                productos = lista
+            try {
+                // 1) Pide los productos al backend (Spring Boot + Postgres)
+                val remotos = RetrofitProducto.api.obtenerProductos()
+                productos = remotos.map { r ->
+                    ProductoEntity(
+                        id = (r.id ?: 0L).toInt(),
+                        nombre = r.nombre,
+                        descripcion = r.descripcion,
+                        categoria = r.categoria,
+                        precio = r.precio,
+                        porciones = r.porciones,
+                        imagen = r.imagen
+                    )
+                }
+            } catch (e: Exception) {
+                // 2) Si no hay conexión, usa los datos locales (Room)
+                val repo = repositorio(context)
+                repo.cargarProductosIniciales()
+                repo.obtenerTodos().collect { lista ->
+                    productos = lista
+                }
             }
         }
     }

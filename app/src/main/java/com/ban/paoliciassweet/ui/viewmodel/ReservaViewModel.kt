@@ -1,6 +1,8 @@
 package com.ban.paoliciassweet.ui.viewmodel
 
 import android.content.Context
+import com.grupo9.data.api.RetrofitReserva
+import com.grupo9.model.ReservaRemota
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -108,7 +110,27 @@ class ReservaViewmodel : ViewModel() {
                 total = cotizacion.total
             )
 
+            // 1) Se guarda local (Room), como antes
             reservaRepositorio(context).guardar(nuevaReserva)
+
+            // 2) Se envía al backend (reservas-service)
+            try {
+                RetrofitReserva.api.crearReserva(
+                    ReservaRemota(
+                        nombreEvento = nuevaReserva.nombreEvento,
+                        fecha = nuevaReserva.fecha,
+                        horario = nuevaReserva.horario,
+                        invitados = nuevaReserva.invitados,
+                        observaciones = nuevaReserva.observaciones,
+                        correoCliente = nuevaReserva.correoCliente,
+                        estadoAbono = nuevaReserva.estadoAbono,
+                        productos = nuevaReserva.productos,
+                        total = nuevaReserva.total
+                    )
+                )
+            } catch (e: Exception) {
+                // Si no hay conexión, la reserva igual queda guardada en Room
+            }
 
             successMessage = "¡Reserva guardada exitosamente!"
         }
