@@ -47,6 +47,9 @@ class HomeViewModel : ViewModel() {
     fun cargarProductos(context: Context) {
         job?.cancel()
         job = viewModelScope.launch {
+            // Llena Room (solo si está vacía): el detalle del producto lee de ahí
+            repositorio(context).cargarProductosIniciales()
+
             try {
                 // 1) Pide los productos al backend (Spring Boot + Postgres)
                 val remotos = RetrofitProducto.api.obtenerProductos()
@@ -63,9 +66,7 @@ class HomeViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 // 2) Si no hay conexión, usa los datos locales (Room)
-                val repo = repositorio(context)
-                repo.cargarProductosIniciales()
-                repo.obtenerTodos().collect { lista ->
+                repositorio(context).obtenerTodos().collect { lista ->
                     productos = lista
                 }
             }

@@ -1,6 +1,10 @@
 package com.ban.paoliciassweet.ui.screen
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -148,18 +152,51 @@ fun PanelAdminScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Button(
-                                        onClick = { viewModel.validarAbono(context, reserva.id) },
+                                        onClick = {
+                                            viewModel.validarAbono(context, reserva.id)
+                                            vibrar(context, 150)
+                                        },
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Text("Validar abono")
                                     }
                                     Button(
-                                        onClick = { viewModel.rechazarAbono(context, reserva.id) },
+                                        onClick = {
+                                            viewModel.rechazarAbono(context, reserva.id)
+                                            vibrar(context, 400)
+                                        },
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Text("Rechazar")
                                     }
                                 }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Recurso nativo del administrador: abre el correo para contactar al cliente
+                            Button(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                        data = Uri.parse("mailto:${reserva.correoCliente}")
+                                        putExtra(
+                                            Intent.EXTRA_SUBJECT,
+                                            "Tu reserva en Paolicias.Sweet: ${reserva.nombreEvento}"
+                                        )
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            "Hola, te escribimos por tu reserva del ${reserva.fecha} a las ${reserva.horario}."
+                                        )
+                                    }
+                                    try {
+                                        context.startActivity(intent)
+                                    } catch (e: ActivityNotFoundException) {
+                                        Toast.makeText(context, "No hay app de correo instalada", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Contactar cliente")
                             }
                         }
                     }

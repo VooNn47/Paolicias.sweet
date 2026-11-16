@@ -159,6 +159,7 @@ fun AppNavigation() {
                         delay(demora)
                         navController.navigate(Routes.HOME) {
                             popUpTo(Routes.HOME) { inclusive = false }
+                            launchSingleTop = true
                         }
                     }
                 },
@@ -185,6 +186,7 @@ fun AppNavigation() {
                         delay(demora)
                         navController.navigate(Routes.HOME) {
                             popUpTo(Routes.HOME) { inclusive = false }
+                            launchSingleTop = true
                         }
                     }
                 },
@@ -210,6 +212,7 @@ fun AppNavigation() {
                         delay(demora)
                         navController.navigate(Routes.HOME) {
                             popUpTo(Routes.HOME) { inclusive = false }
+                            launchSingleTop = true
                         }
                     }
                 },
