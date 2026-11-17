@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="e278e64e-ba47-418e-8205-38292238b4f4" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../.idea/deploymentTargetSelector.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/data/locale/dao/ReservaDao.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/data/locale/dao/SaldoDao.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/data/locale/dao/UsuarioDao.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/data/locale/database/AppDatabase.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/data/locale/entity/ReservaEntity.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/data/locale/entity/SaldoEntity.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/data/locale/entity/UserEntity.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/model/AgendaModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/model/HomeModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/model/LoginModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/model/PanelAdminModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/model/PerfilModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/model/RegisterModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/model/ReservaModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/model/Sesion.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/components/BarraInferior.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/components/Footer.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/components/Header.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/navigation/AppNavigation.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/screen/AgendaScreen.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/screen/BanqueteriaScreen.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/screen/HomeScreen.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/screen/LoginScreen.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/screen/PanelAdminScreen.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/screen/PerfilScreen.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/screen/RegisterScreen.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/screen/ReservaScreen.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/screen/Vibracion.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/viewmodel/AdminViewModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/viewmodel/AgendaViewModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/viewmodel/HomeViewModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/viewmodel/LoginViewModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/viewmodel/PerfilViewModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/viewmodel/RegisterViewModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/viewmodel/ReservaViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/MainActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/theme/Color.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/theme/Color.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/theme/Theme.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ban/paoliciassweet/ui/theme/Theme.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../gradle/libs.versions.toml" beforeDir="false" afterPath="$PROJECT_DIR$/../gradle/libs.versions.toml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 6,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3LhnZyaortN5vqaa4LWJBvkGQef" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "ian",
+    "kotlin-language-version-configured": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-a203e0a19954-intellij.indexing.shared.core-IU-262.10315.125" />
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-IU-262.10315.125" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="e278e64e-ba47-418e-8205-38292238b4f4" name="Changes" comment="" />
+      <created>1793915228207</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1793915228207</updated>
+    </task>
+    <servers />
+  </component>
+</project>
