@@ -7,7 +7,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitReserva {
 
-    private const val BASE_URL = "http://10.0.2.2:8082/"
+    private const val BASE_URL = "http://100.54.242.126:8082/"
 
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
