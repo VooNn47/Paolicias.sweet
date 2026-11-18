@@ -2,11 +2,13 @@ package com.ban.paoliciassweet.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -15,9 +17,13 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -34,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -42,11 +49,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ban.paoliciassweet.model.Cotizacion
 import com.ban.paoliciassweet.ui.components.BarraInferior
 import com.ban.paoliciassweet.ui.components.CampoValidado
 import com.ban.paoliciassweet.ui.components.Header
+import com.ban.paoliciassweet.ui.theme.BlancoHueso
+import com.ban.paoliciassweet.ui.theme.Burdeos
 import com.ban.paoliciassweet.ui.theme.MarronSuave
-import com.ban.paoliciassweet.ui.viewmodel.ReservaViewmodel
+import com.ban.paoliciassweet.ui.util.formatoPrecio
+import com.ban.paoliciassweet.ui.viewmodel.ReservaViewModel
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -58,7 +69,7 @@ fun ReservaScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToAgenda: () -> Unit = {},
     onNavigateToPerfil: () -> Unit = {},
-    reservaViewModel: ReservaViewmodel = viewModel()
+    reservaViewModel: ReservaViewModel = viewModel()
 ) {
     val uiState = reservaViewModel.uiState
     val context = LocalContext.current
@@ -83,7 +94,7 @@ fun ReservaScreen(
     )
 
     LaunchedEffect(Unit) {
-        reservaViewModel.cargarProductosElegidos(context)
+        reservaViewModel.cargarProductosElegidos()
     }
 
     if (mostrarCalendario) {
@@ -170,8 +181,8 @@ fun ReservaScreen(
                     color = MarronSuave
                 )
             } else {
-                reservaViewModel.productosElegidos.forEach { nombre ->
-                    Text(text = "• $nombre", fontSize = 14.sp)
+                reservaViewModel.productosElegidos.forEach { producto ->
+                    Text(text = "• ${producto.nombre}", fontSize = 14.sp)
                 }
             }
 
@@ -229,25 +240,68 @@ fun ReservaScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            if (reservaViewModel.successMessage != null) {
-                Text(
-                    text = reservaViewModel.successMessage!!,
-                    color = Color(0xFF2E7D32),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
+            // Desglose calculado por el backend (tarifa + productos) antes de enviar
+            reservaViewModel.cotizacion?.let { TarjetaCotizacion(it) }
+            reservaViewModel.cotizacionError?.let {
+                Text(text = it, color = MarronSuave, fontSize = 13.sp)
+            }
+
+            reservaViewModel.errorMessage?.let {
+                Text(text = it, color = Color(0xFFC62828), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+
+            reservaViewModel.successMessage?.let {
+                Text(text = it, color = Color(0xFF2E7D32), fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
 
             Button(
                 onClick = {
-                    vibrar(context, 1500L)
-                    reservaViewModel.guardarReserva(context)
+                    // Vibra solo cuando el servidor confirmó la reserva
+                    reservaViewModel.guardarReserva { vibrar(context, 300L) }
                 },
+                enabled = !reservaViewModel.cargando,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(50)
             ) {
-                Text(text = "Enviar reserva")
+                if (reservaViewModel.cargando) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                } else {
+                    Text(text = "Enviar reserva")
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun TarjetaCotizacion(c: Cotizacion) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = BlancoHueso),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Cotización para ${c.invitados} invitados", fontWeight = FontWeight.Bold, color = Burdeos)
+            FilaPrecio("Servicio de banquetería", c.servicio)
+            c.lineas.forEach { l ->
+                FilaPrecio("${l.nombre} × ${l.unidades}", l.subtotal)
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            FilaPrecio("Total", c.total, negrita = true)
+            FilaPrecio("Abono para reservar (50%)", c.abono, negrita = true)
+        }
+    }
+}
+
+@Composable
+private fun FilaPrecio(texto: String, monto: Int, negrita: Boolean = false) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val peso = if (negrita) FontWeight.Bold else FontWeight.Normal
+        Text(texto, fontSize = 14.sp, fontWeight = peso, modifier = Modifier.weight(1f))
+        Text(formatoPrecio(monto), fontSize = 14.sp, fontWeight = peso)
     }
 }

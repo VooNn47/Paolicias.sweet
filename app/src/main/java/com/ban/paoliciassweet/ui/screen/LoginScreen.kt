@@ -84,14 +84,14 @@ fun LoginScreen(
 
             Button(
                 onClick = {
-                    viewModel.onLoginClick(context) {
-                        Toast.makeText(context, "Bienvenido denuevo", Toast.LENGTH_SHORT).show()
+                    viewModel.onLoginClick {
+                        Toast.makeText(context, "Bienvenido de nuevo", Toast.LENGTH_SHORT).show()
                         onLoginSuccess()
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "Ingresar")
+                Text(text = if (viewModel.cargando) "Ingresando..." else "Ingresar")
             }
 
             Spacer(modifier = Modifier.height(8.dp))

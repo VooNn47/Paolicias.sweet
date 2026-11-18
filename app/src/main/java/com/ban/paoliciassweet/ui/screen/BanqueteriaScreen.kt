@@ -98,6 +98,6 @@ fun BanqueteriaScreen(
 @Composable
 fun BanqueteriaScreenPreview() {
     BanqueteriaTheme {
-        PerfilScreen()
+        BanqueteriaScreen(onNavigateToLogin = {})
     }
 }

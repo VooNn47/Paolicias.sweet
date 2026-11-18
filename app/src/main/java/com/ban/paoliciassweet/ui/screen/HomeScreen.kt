@@ -25,7 +25,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ban.paoliciassweet.data.local.entity.ProductoEntity
 import com.ban.paoliciassweet.ui.components.BarraInferior
 import com.ban.paoliciassweet.ui.theme.BanqueteriaTheme
@@ -50,7 +53,7 @@ import com.ban.paoliciassweet.ui.viewmodel.HomeViewModel
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel,
+    viewModel: HomeViewModel = viewModel(),
     onProductoClick: (Int) -> Unit,
     onNavigateToReserva: () -> Unit,
     onNavigateToAgenda: () -> Unit,
@@ -99,6 +102,24 @@ fun HomeScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+            if (viewModel.cargando) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
+            // Sin conexión: se muestra la copia guardada en Room, con opción de reintentar
+            viewModel.aviso?.let { aviso ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = aviso, fontSize = 12.sp, color = MarronSuave, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { viewModel.cargarProductos() }) { Text("Reintentar") }
+                }
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
             // Categorías que salen de la base de datos
@@ -213,13 +234,11 @@ private fun ProductoCard(
     }
 }
 
-@Suppress("ViewModelConstructorInComposable")
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
     BanqueteriaTheme {
         HomeScreen(
-            viewModel = HomeViewModel(),
             onProductoClick = {},
             onNavigateToReserva = {},
             onNavigateToAgenda = {},

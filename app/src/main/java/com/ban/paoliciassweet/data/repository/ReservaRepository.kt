@@ -1,38 +1,46 @@
 package com.ban.paoliciassweet.data.repository
 
-import com.ban.paoliciassweet.data.local.dao.ReservaDao
-import com.ban.paoliciassweet.data.local.entity.ReservaEntity
+import com.ban.paoliciassweet.data.api.ReservaApi
+import com.ban.paoliciassweet.data.api.RetrofitReserva
+import com.ban.paoliciassweet.model.Cotizacion
+import com.ban.paoliciassweet.model.CotizacionRequest
+import com.ban.paoliciassweet.model.NuevaReserva
+import com.ban.paoliciassweet.model.ReservaRemota
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
+// Único que sabe de dónde vienen las reservas: reservas-service (backend).
+// Así el cliente y la administradora ven los mismos datos desde cualquier teléfono.
+class ReservaRepository(private val api: ReservaApi = RetrofitReserva.api) {
 
-class ReservaRepository(private val dao: ReservaDao) {
+    suspend fun crear(reserva: NuevaReserva): ReservaRemota = api.crearReserva(reserva)
 
+    suspend fun cotizar(invitados: Int, productoIds: List<Long>): Cotizacion =
+        api.cotizar(CotizacionRequest(invitados, productoIds))
 
-    suspend fun guardar(reserva: ReservaEntity) {
-        dao.guardarReserva(reserva)
+    suspend fun misReservas(correo: String): List<ReservaRemota> = api.obtenerReservas(correo = correo)
+
+    // estado = null o "Todas" -> todas
+    suspend fun todas(estado: String?): List<ReservaRemota> =
+        api.obtenerReservas(estado = estado?.takeIf { it != "Todas" })
+
+    suspend fun subirComprobante(id: Long, correo: String, jpeg: ByteArray): ReservaRemota {
+        val parte = MultipartBody.Part.createFormData(
+            "archivo", "comprobante_$id.jpg", jpeg.toRequestBody("image/jpeg".toMediaType())
+        )
+        return api.subirComprobante(id, correo, parte)
     }
 
-
-    suspend fun obtenerPorCliente(correo: String): List<ReservaEntity> {
-        return dao.obtenerReservasPorCliente(correo)
+    suspend fun comprobante(id: Long): ByteArray = withContext(Dispatchers.IO) {
+        api.obtenerComprobante(id).use { it.bytes() }
     }
 
+    suspend fun validarAbono(id: Long): ReservaRemota = api.validarAbono(id)
 
-    suspend fun adjuntarComprobante(id: Int, ruta: String) {
-        dao.adjuntarComprobante(id, ruta)
-    }
+    suspend fun rechazarAbono(id: Long): ReservaRemota = api.rechazarAbono(id)
 
-
-    suspend fun obtenerTodas(): List<ReservaEntity> {
-        return dao.obtenerTodas()
-    }
-
-
-    suspend fun validarAbono(id: Int, fechaPago: String) {
-        dao.validarAbono(id, fechaPago)
-    }
-
-    
-    suspend fun rechazarAbono(id: Int) {
-        dao.rechazarAbono(id)
-    }
+    suspend fun completar(id: Long): ReservaRemota = api.completarReserva(id)
 }

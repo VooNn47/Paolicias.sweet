@@ -101,7 +101,7 @@ fun RegisterScreen(
 
                 Button(
                     onClick = {
-                        viewModel.onRegisterClick(context) {
+                        viewModel.onRegisterClick {
                             Toast.makeText(
                                 context,
                                 "¡Registro Exitoso!, Por favor inicia sesión",
@@ -112,7 +112,7 @@ fun RegisterScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Registrarse")
+                    Text(text = if (viewModel.cargando) "Registrando..." else "Registrarse")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
