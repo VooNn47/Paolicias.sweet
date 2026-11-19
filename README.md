@@ -22,9 +22,10 @@ Proyecto del ramo **DSY1105 – Desarrollo de Aplicaciones Móviles** (Duoc UC),
 9. [Validación de formularios](#validación-de-formularios)
 10. [Persistencia local (SQLite / Room)](#persistencia-local-sqlite--room)
 11. [Recursos nativos](#recursos-nativos)
-12. [Animaciones](#animaciones)
-13. [Pruebas](#pruebas)
-14. [Limitaciones conocidas](#limitaciones-conocidas)
+12. [APIs externas](#apis-externas)
+13. [Animaciones](#animaciones)
+14. [Pruebas](#pruebas)
+15. [Limitaciones conocidas](#limitaciones-conocidas)
 
 ---
 
@@ -36,7 +37,8 @@ Proyecto del ramo **DSY1105 – Desarrollo de Aplicaciones Móviles** (Duoc UC),
 - **Catálogo** desde `catalogo-service`, con buscador y filtro por categoría. Sin conexión muestra la copia guardada en Room.
 - **Detalle de producto** con *Agregar a mi evento* / *Quitar de mi evento*.
 - **Reserva del evento**: nombre, fecha (solo desde hoy), horario, invitados (1 a 100) y observaciones. Muestra la **cotización** (tarifa + productos + total + abono) calculada por `cotizacion-service` antes de enviar. Vibra cuando el servidor confirma.
-- **Mi Agenda**: sus reservas desde `reservas-service`, ordenadas por fecha, con precio, abono y estado.
+- **Mi Agenda**: sus reservas desde `reservas-service`, ordenadas por fecha, con precio, abono y estado. El precio también se muestra en dólares (API externa ExchangeRate-API).
+- **Aviso de feriado**: al elegir la fecha, la app avisa si es feriado en Chile (API externa Nager.Date).
 - **Comprobante** de transferencia con la **cámara** o desde la **galería**; se sube al backend.
 - **Perfil** con sus datos y cierre de sesión.
 
@@ -47,6 +49,7 @@ Proyecto del ramo **DSY1105 – Desarrollo de Aplicaciones Móviles** (Duoc UC),
 - **Calcular insumos** de cada reserva antes de aceptarla: muestra cuánto se necesita de cada insumo, cuánto hay y qué falta.
 - **Validar abono**, **Rechazar** o **Marcar como completada**. Al validar se descuentan los insumos del inventario; si falta algo, no deja validar y avisa qué falta.
 - **Inventario de insumos**: pantalla con la lista y el stock de cada insumo, con opción de ajustarlo (por ejemplo, después de comprar).
+- **Feriados marcados**: las reservas que caen en feriado aparecen con un aviso, para planificar el personal.
 - **Notificación** cuando hay comprobantes esperando validación.
 - **Contactar al cliente** por correo.
 
@@ -277,6 +280,21 @@ La foto se reduce a máximo 1600 px y JPEG 80% antes de subirla (~300 KB). La c�
 
 ---
 
+## APIs externas
+
+Además de los microservicios propios, la app consume **dos APIs públicas de terceros** con Retrofit (`data/api/ApisExternas.kt`). Las dos son gratuitas y no piden registro ni clave.
+
+| API | Endpoint | Dónde se usa | Para qué |
+|---|---|---|---|
+| **Nager.Date** (feriados) | `GET https://date.nager.at/api/v3/PublicHolidays/{año}/CL` | Reservar evento, Panel admin | Avisa si la fecha del evento es feriado en Chile, porque ese día cuesta más conseguir personal |
+| **ExchangeRate-API** (tipo de cambio) | `GET https://open.er-api.com/v6/latest/CLP` | Cotización y Mi Agenda | Muestra el total y el abono también en dólares, con el valor del día |
+
+- `ExternasRepository` guarda las respuestas en memoria: los feriados de cada año y la tasa del dólar se piden una sola vez.
+- **Si la API externa no responde, la app sigue funcionando**: solo no muestra el aviso ni el monto en dólares.
+- La lógica pura (convertir la fecha, buscar el feriado, convertir pesos a dólares) está en `util/Externas.kt` y tiene pruebas unitarias (`ExternasTest`).
+
+---
+
 ## Animaciones
 
 En **Mi Agenda**: el color del estado cambia gradualmente (`animateColorAsState`, 600 ms) y el comprobante aparece con fundido y expansión (`AnimatedVisibility`).
@@ -285,8 +303,8 @@ En **Mi Agenda**: el color del estado cambia gradualmente (`animateColorAsState`
 
 ## Pruebas
 
-- App: `./gradlew testDebugUnitTest` (`SeguridadTest`: cifrado de contraseñas).
-- Backend: JUnit 5 + Mockito en cada microservicio (`./mvnw test`), 31 pruebas en total.
+- App: `./gradlew testDebugUnitTest`, 13 pruebas: `SeguridadTest` (cifrado de contraseñas) y `ExternasTest` (feriados y dólar).
+- Backend: JUnit 5 + Mockito en cada microservicio (`./mvnw test`), 49 pruebas en total (catálogo 8, cotización 8, insumos 11, reservas 22).
 
 ---
 

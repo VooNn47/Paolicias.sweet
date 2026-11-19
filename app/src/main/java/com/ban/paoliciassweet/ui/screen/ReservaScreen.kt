@@ -57,6 +57,7 @@ import com.ban.paoliciassweet.ui.theme.BlancoHueso
 import com.ban.paoliciassweet.ui.theme.Burdeos
 import com.ban.paoliciassweet.ui.theme.MarronSuave
 import com.ban.paoliciassweet.ui.util.formatoPrecio
+import com.ban.paoliciassweet.util.Externas
 import com.ban.paoliciassweet.ui.viewmodel.ReservaViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -209,6 +210,21 @@ fun ReservaScreen(
                 }
             )
 
+            // API externa (Nager.Date): aviso si la fecha es feriado en Chile
+            reservaViewModel.avisoFeriado?.let { aviso ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0))
+                ) {
+                    Text(
+                        text = "⚠ $aviso",
+                        color = Color(0xFFB26A00),
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+
             CampoValidado(
                 value = uiState.horario,
                 onValueChange = {},
@@ -241,7 +257,7 @@ fun ReservaScreen(
             )
 
             // Desglose calculado por el backend (tarifa + productos) antes de enviar
-            reservaViewModel.cotizacion?.let { TarjetaCotizacion(it) }
+            reservaViewModel.cotizacion?.let { TarjetaCotizacion(it, reservaViewModel.tasaDolar) }
             reservaViewModel.cotizacionError?.let {
                 Text(text = it, color = MarronSuave, fontSize = 13.sp)
             }
@@ -274,7 +290,7 @@ fun ReservaScreen(
 }
 
 @Composable
-private fun TarjetaCotizacion(c: Cotizacion) {
+private fun TarjetaCotizacion(c: Cotizacion, tasaDolar: Double?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = BlancoHueso),
@@ -289,6 +305,16 @@ private fun TarjetaCotizacion(c: Cotizacion) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             FilaPrecio("Total", c.total, negrita = true)
             FilaPrecio("Abono para reservar (50%)", c.abono, negrita = true)
+            // API externa (ExchangeRate-API): referencia en dólares con el valor del día
+            if (tasaDolar != null) {
+                Text(
+                    text = "≈ ${Externas.formatoDolar(Externas.aDolares(c.total, tasaDolar))} " +
+                            "(1 USD = ${formatoPrecio(Externas.pesosPorDolar(tasaDolar))})",
+                    fontSize = 12.sp,
+                    color = MarronSuave
+                )
+                Text("Tipo de cambio: ExchangeRate-API", fontSize = 10.sp, color = MarronSuave)
+            }
         }
     }
 }

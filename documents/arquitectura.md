@@ -28,6 +28,7 @@ flowchart LR
     RET -- "/api/cotizacion" --> CADDY
     RET -- "/api/reservas" --> CADDY
     RET -- "/api/insumos" --> CADDY
+    RET -- "HTTPS (APIs de terceros)" --> EXT["APIs externas<br/>Nager.Date (feriados)<br/>ExchangeRate-API (dólar)"]
     CADDY --> CAT
     CADDY --> COT
     CADDY --> RES
@@ -78,6 +79,7 @@ flowchart TB
         R3[ReservaRepository]
         R4[CotizacionRepository]
         R5[InsumoRepository]
+        R6[ExternasRepository]
     end
 
     S1 --> V1 --> R1 --> DAO1[("UserDao → SQLite users")]
@@ -92,6 +94,10 @@ flowchart TB
     S6 --> V6 --> R3
     R3 --> API2["ReservaApi (Retrofit) → reservas-service"]
     S7 --> V7 --> R5 --> API4["InsumoApi (Retrofit) → insumos-service"]
+    V3 --> R6
+    V4 --> R6
+    V6 --> R6
+    R6 --> API5["FeriadosApi / CambioApi (Retrofit) → APIs externas"]
 ```
 
 ## 3. Navegación por rol
