@@ -1,7 +1,6 @@
 package com.ban.paoliciassweet.data.api
 
-import com.ban.paoliciassweet.model.Cotizacion
-import com.ban.paoliciassweet.model.CotizacionRequest
+import com.ban.paoliciassweet.model.CalculoInsumos
 import com.ban.paoliciassweet.model.NuevaReserva
 import com.ban.paoliciassweet.model.ReservaRemota
 import okhttp3.MultipartBody
@@ -28,9 +27,6 @@ interface ReservaApi {
     @POST("api/reservas")
     suspend fun crearReserva(@Body reserva: NuevaReserva): ReservaRemota
 
-    @POST("api/cotizacion")
-    suspend fun cotizar(@Body request: CotizacionRequest): Cotizacion
-
     @Multipart
     @POST("api/reservas/{id}/comprobante")
     suspend fun subirComprobante(
@@ -41,6 +37,10 @@ interface ReservaApi {
 
     @GET("api/reservas/{id}/comprobante")
     suspend fun obtenerComprobante(@Path("id") id: Long): ResponseBody
+
+    // Botón "Calcular insumos" del panel admin
+    @GET("api/reservas/{id}/insumos")
+    suspend fun calcularInsumos(@Path("id") id: Long): CalculoInsumos
 
     @PATCH("api/reservas/{id}/validar")
     suspend fun validarAbono(@Path("id") id: Long): ReservaRemota

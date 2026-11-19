@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
 import com.ban.paoliciassweet.data.local.entity.ProductoEntity
+import com.ban.paoliciassweet.data.repository.CotizacionRepository
 import com.ban.paoliciassweet.data.repository.ProductoRepository
 import com.ban.paoliciassweet.data.repository.ReservaRepository
 import com.ban.paoliciassweet.model.Cotizacion
@@ -53,6 +54,7 @@ class ReservaViewModel(application: Application) : AndroidViewModel(application)
 
     private val productoRepositorio = ProductoRepository(AppDatabase.getDatabase(application).productoDao())
     private val reservaRepositorio = ReservaRepository()
+    private val cotizacionRepositorio = CotizacionRepository()
 
     fun onNombreEventoChanged(nombre: String) {
         uiState = uiState.copy(nombreEvento = nombre, nombreEventoError = null)
@@ -95,7 +97,7 @@ class ReservaViewModel(application: Application) : AndroidViewModel(application)
         jobCotizacion = viewModelScope.launch {
             delay(400)
             try {
-                cotizacion = reservaRepositorio.cotizar(cantidad, productosElegidos.map { it.id.toLong() })
+                cotizacion = cotizacionRepositorio.cotizar(cantidad, productosElegidos.map { it.id.toLong() })
                 cotizacionError = null
             } catch (e: Exception) {
                 cotizacion = null

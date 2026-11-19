@@ -35,7 +35,7 @@ Proyecto del ramo **DSY1105 – Desarrollo de Aplicaciones Móviles** (Duoc UC),
 - **Registro e inicio de sesión** en SQLite, con validación por campo (borde rojo, mensaje e ícono de error).
 - **Catálogo** desde `catalogo-service`, con buscador y filtro por categoría. Sin conexión muestra la copia guardada en Room.
 - **Detalle de producto** con *Agregar a mi evento* / *Quitar de mi evento*.
-- **Reserva del evento**: nombre, fecha (solo desde hoy), horario, invitados (1 a 100) y observaciones. Muestra la **cotización** (tarifa + productos + total + abono) calculada por el backend antes de enviar. Vibra cuando el servidor confirma.
+- **Reserva del evento**: nombre, fecha (solo desde hoy), horario, invitados (1 a 100) y observaciones. Muestra la **cotización** (tarifa + productos + total + abono) calculada por `cotizacion-service` antes de enviar. Vibra cuando el servidor confirma.
 - **Mi Agenda**: sus reservas desde `reservas-service`, ordenadas por fecha, con precio, abono y estado.
 - **Comprobante** de transferencia con la **cámara** o desde la **galería**; se sube al backend.
 - **Perfil** con sus datos y cierre de sesión.
@@ -44,7 +44,9 @@ Proyecto del ramo **DSY1105 – Desarrollo de Aplicaciones Móviles** (Duoc UC),
 
 - **Panel de reservas** de todos los clientes, ordenadas por fecha, con filtros *Todas / Pendiente / En revisión / Pagado 50% / Completado*.
 - **Revisión del comprobante** (imagen descargada del backend) y abono a validar.
-- **Validar abono**, **Rechazar** o **Marcar como completada**.
+- **Calcular insumos** de cada reserva antes de aceptarla: muestra cuánto se necesita de cada insumo, cuánto hay y qué falta.
+- **Validar abono**, **Rechazar** o **Marcar como completada**. Al validar se descuentan los insumos del inventario; si falta algo, no deja validar y avisa qué falta.
+- **Inventario de insumos**: pantalla con la lista y el stock de cada insumo, con opción de ajustarlo (por ejemplo, después de comprar).
 - **Notificación** cuando hay comprobantes esperando validación.
 - **Contactar al cliente** por correo.
 
@@ -72,7 +74,7 @@ La administradora es la cuenta registrada con el correo `admin@paolicias.cl` (el
 
 ```
 Screen (Composable) → ViewModel → Repository → Room (SQLite)       login, registro, copia del catálogo
-                                             → Retrofit → Backend   catálogo y reservas
+                                             → Retrofit → Backend   catálogo, cotización, reservas e insumos
 ```
 
 | Capa | Responsabilidad | Ejemplo |
@@ -87,6 +89,8 @@ Screen (Composable) → ViewModel → Repository → Room (SQLite)       login, 
 | `UserRepository` | SQLite (`users`) | Login, Registro, Perfil |
 | `ProductoRepository` | `catalogo-service` + copia en SQLite (`productos`) | Catálogo, Detalle, Reserva |
 | `ReservaRepository` | `reservas-service` | Reserva, Mi Agenda, Panel admin |
+| `CotizacionRepository` | `cotizacion-service` | Reserva (desglose del precio) |
+| `InsumoRepository` | `insumos-service` | Insumos (inventario de la admin) |
 
 Objetos en memoria: `Sesion` (correo, nombre y rol del usuario) y `SeleccionEvento` (productos elegidos).
 
@@ -100,13 +104,13 @@ Diagramas completos en [`documents/arquitectura.md`](documents/arquitectura.md).
 com.ban.paoliciassweet
 ├── MainActivity.kt
 ├── data
-│   ├── api            ProductoApi, ReservaApi, RetrofitProducto, RetrofitReserva
+│   ├── api            ProductoApi, ReservaApi, CotizacionApi, InsumoApi y sus Retrofit
 │   ├── local
 │   │   ├── dao        UserDao, ProductoDao
 │   │   ├── database   AppDatabase
 │   │   ├── entity     UserEntity (+ Roles), ProductoEntity
 │   │   └── seed       ProductosIniciales (catálogo de respaldo sin conexión)
-│   └── repository     UserRepository, ProductoRepository, ReservaRepository
+│   └── repository     UserRepository, ProductoRepository, ReservaRepository, CotizacionRepository, InsumoRepository
 ├── model              un modelo por pantalla, ProductoRemoto, ReservaRemota, Sesion, SeleccionEvento
 ├── util               Seguridad (PBKDF2), Imagenes, Notificaciones, Errores
 └── ui
@@ -130,6 +134,7 @@ com.ban.paoliciassweet
 | `Agenda` | Mi Agenda | Cliente |
 | `Perfil` | Perfil y cierre de sesión | Cliente |
 | `Admin` | Panel de administradora | Administradora |
+| `Admin/insumos` | Inventario de insumos | Administradora |
 
 Las pantallas del cliente redirigen al login si no hay sesión, y al panel si entra la administradora.
 Al cerrar sesión se borra el historial de navegación (el botón *Atrás* no vuelve a la sesión cerrada).
@@ -140,7 +145,7 @@ Al cerrar sesión se borra el historial de navegación (el botón *Atrás* no vu
 
 1. Levantar el backend (ver su README): `docker compose up -d --build`.
 2. Abrir este proyecto en **Android Studio** y esperar la sincronización de Gradle.
-3. Ejecutar en un **emulador** (Android 8.0 / API 26 o superior). En *debug* la app usa `http://10.0.2.2:8081/` y `http://10.0.2.2:8082/`, que en el emulador apuntan al computador.
+3. Ejecutar en un **emulador** (Android 8.0 / API 26 o superior). En *debug* la app usa `http://10.0.2.2:8081/` (catálogo), `http://10.0.2.2:8082/` (reservas), `http://10.0.2.2:8083/` (cotización) y `http://10.0.2.2:8084/` (insumos), que en el emulador apuntan al computador.
 4. Registrar un **cliente** con datos ficticios, o la **administradora** con `admin@paolicias.cl`.
 
 **Cambiar la dirección del backend** sin tocar el código, en `gradle.properties`:
@@ -148,6 +153,8 @@ Al cerrar sesión se borra el historial de navegación (el botón *Atrás* no vu
 ```properties
 API_CATALOGO_DEBUG=http://IP_DE_LA_EC2:8081/
 API_RESERVAS_DEBUG=http://IP_DE_LA_EC2:8082/
+API_COTIZACION_DEBUG=http://IP_DE_LA_EC2:8083/
+API_INSUMOS_DEBUG=http://IP_DE_LA_EC2:8084/
 API_URL_RELEASE=https://tu-dominio.duckdns.org/
 ```
 
@@ -196,7 +203,7 @@ Al **rechazar**, el backend borra el comprobante para que el cliente adjunte uno
 
 ## Reglas de negocio
 
-### Cotización (la calcula `reservas-service` con los precios de `catalogo-service`)
+### Cotización (la calcula `cotizacion-service` con su tabla `tarifas` y los precios de `catalogo-service`)
 
 ```
 total = tarifa del servicio (según invitados) + Σ por cada producto: ceil(invitados / porciones) × precio
