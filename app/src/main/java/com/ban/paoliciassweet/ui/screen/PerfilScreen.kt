@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -37,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ban.paoliciassweet.R
-import com.ban.paoliciassweet.model.SeleccionEvento
 import com.ban.paoliciassweet.model.Sesion
 import com.ban.paoliciassweet.ui.components.BarraInferior
 import com.ban.paoliciassweet.ui.components.Header
@@ -57,11 +55,10 @@ fun PerfilScreen(
     onLogout: () -> Unit = {},
     viewModel: PerfilViewModel = viewModel()
 ) {
-    val context = LocalContext.current
     val perfil = viewModel.uiState
 
     LaunchedEffect(Unit) {
-        viewModel.cargarPerfil(context, Sesion.correo)
+        viewModel.cargarPerfil(Sesion.correo)
     }
 
     Scaffold(
@@ -162,10 +159,7 @@ fun PerfilScreen(
             // Cierra la sesión: borra los datos en memoria y vuelve al login
             Button(
                 onClick = {
-                    Sesion.correo = ""
-                    Sesion.esAdmin = false
-                    SeleccionEvento.limpiar()
-                    onLogout()
+                    onLogout() // AppNavigation cierra la sesión y borra el historial
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {

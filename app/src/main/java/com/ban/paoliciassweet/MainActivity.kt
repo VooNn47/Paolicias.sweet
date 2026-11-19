@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.ban.paoliciassweet.ui.navigation.AppNavigation
 import com.ban.paoliciassweet.ui.theme.BanqueteriaTheme
-import com.grupo9.ui.ProductoRemotoScreen
 
 
 class MainActivity : ComponentActivity() {

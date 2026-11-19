@@ -1,8 +1,11 @@
 # Paolicias.Sweet
 
-App móvil Android de **banquetería**: el cliente arma su evento con productos del catálogo, reserva fecha y horario, y bloquea la fecha pagando un **abono del 50%** que la administradora valida manualmente con el comprobante de transferencia.
+App móvil Android de **banquetería**: el cliente arma su evento con productos del catálogo, reserva fecha y horario, y bloquea la fecha pagando un **abono del 50%** que la administradora valida con el comprobante de transferencia.
 
-MVP desarrollado para el ramo **DSY1105 – Desarrollo de Aplicaciones Móviles** (Duoc UC). Todos los datos de la app (usuarios, correos, reservas, comprobantes) son **ficticios**.
+Proyecto del ramo **DSY1105 – Desarrollo de Aplicaciones Móviles** (Duoc UC), Experiencia 3. Todos los datos (usuarios, correos, reservas, comprobantes) son **ficticios**.
+
+- Backend (microservicios Spring Boot): repositorio `Paolicias.sweet-backend`.
+- Diagramas de arquitectura: carpeta [`documents/`](documents/arquitectura.md) (rama `documents`).
 
 ---
 
@@ -13,14 +16,15 @@ MVP desarrollado para el ramo **DSY1105 – Desarrollo de Aplicaciones Móviles*
 3. [Arquitectura](#arquitectura)
 4. [Estructura del proyecto](#estructura-del-proyecto)
 5. [Cómo ejecutar](#cómo-ejecutar)
-6. [Flujo del abono y estados](#flujo-del-abono-y-estados)
-7. [Reglas de negocio supuestas](#reglas-de-negocio-supuestas)
-8. [Validación de formularios](#validación-de-formularios)
-9. [Persistencia local (Room)](#persistencia-local-room)
-10. [Recursos nativos](#recursos-nativos)
-11. [Animaciones](#animaciones)
-12. [Limitaciones conocidas](#limitaciones-conocidas)
-13. [Pendiente](#pendiente)
+6. [APK firmado](#apk-firmado)
+7. [Flujo del abono y estados](#flujo-del-abono-y-estados)
+8. [Reglas de negocio](#reglas-de-negocio)
+9. [Validación de formularios](#validación-de-formularios)
+10. [Persistencia local (SQLite / Room)](#persistencia-local-sqlite--room)
+11. [Recursos nativos](#recursos-nativos)
+12. [Animaciones](#animaciones)
+13. [Pruebas](#pruebas)
+14. [Limitaciones conocidas](#limitaciones-conocidas)
 
 ---
 
@@ -28,21 +32,23 @@ MVP desarrollado para el ramo **DSY1105 – Desarrollo de Aplicaciones Móviles*
 
 ### Cliente
 
-- **Registro e inicio de sesión** con validación por campo (borde rojo, mensaje e ícono de error).
-- **Catálogo** de productos cargado desde Room, con buscador y filtro por categoría.
-- **Detalle de producto** con botón *Agregar a mi evento* / *Quitar de mi evento*.
-- **Reserva del evento**: nombre, fecha (selector de calendario, solo desde hoy en adelante), horario (selector de hora), cantidad de invitados (1 a 100) y observaciones. Vibra al enviar.
-- **Mi Agenda**: lista de sus reservas ordenadas por fecha real, con precio del evento, abono del 50% y estado del abono.
-- **Adjuntar comprobante** de transferencia desde la galería (sin pedir permisos).
+- **Registro e inicio de sesión** en SQLite, con validación por campo (borde rojo, mensaje e ícono de error).
+- **Catálogo** desde `catalogo-service`, con buscador y filtro por categoría. Sin conexión muestra la copia guardada en Room.
+- **Detalle de producto** con *Agregar a mi evento* / *Quitar de mi evento*.
+- **Reserva del evento**: nombre, fecha (solo desde hoy), horario, invitados (1 a 100) y observaciones. Muestra la **cotización** (tarifa + productos + total + abono) calculada por el backend antes de enviar. Vibra cuando el servidor confirma.
+- **Mi Agenda**: sus reservas desde `reservas-service`, ordenadas por fecha, con precio, abono y estado.
+- **Comprobante** de transferencia con la **cámara** o desde la **galería**; se sube al backend.
 - **Perfil** con sus datos y cierre de sesión.
 
 ### Administradora
 
-- **Panel de reservas** ordenadas cronológicamente, con filtros *Todas / Pendiente / En revisión / Pagado 50%*.
-- **Revisión del comprobante** (miniatura de la imagen y abono a validar).
-- **Validar abono** (el estado pasa a *Pagado 50%* y se guarda la fecha de pago) o **Rechazar** (vuelve a *Pendiente* y el cliente debe adjuntar otro comprobante).
+- **Panel de reservas** de todos los clientes, ordenadas por fecha, con filtros *Todas / Pendiente / En revisión / Pagado 50% / Completado*.
+- **Revisión del comprobante** (imagen descargada del backend) y abono a validar.
+- **Validar abono**, **Rechazar** o **Marcar como completada**.
+- **Notificación** cuando hay comprobantes esperando validación.
+- **Contactar al cliente** por correo.
 
-La administradora es la cuenta con el correo `admin@paolicias.cl`.
+La administradora es la cuenta registrada con el correo `admin@paolicias.cl` (el rol queda guardado en SQLite).
 
 ---
 
@@ -54,7 +60,9 @@ La administradora es la cuenta con el correo `admin@paolicias.cl`.
 | Interfaz | Jetpack Compose + Material 3 (BOM 2026.02.01) |
 | Navegación | Navigation Compose 2.9.8 |
 | Arquitectura | MVVM + Repository |
-| Persistencia | Room 2.8.4 con KSP 2.3.10 |
+| Persistencia local | Room 2.8.4 (SQLite) con KSP |
+| Red | Retrofit 2.11 + Gson + OkHttp |
+| Backend | Spring Boot 4 + JPA + PostgreSQL, en Docker sobre AWS EC2 |
 | Build | Android Gradle Plugin 9.4.1 |
 | Android | minSdk 26, compileSdk y targetSdk 37 |
 
@@ -62,34 +70,27 @@ La administradora es la cuenta con el correo `admin@paolicias.cl`.
 
 ## Arquitectura
 
-La app usa **MVVM** con una capa **Repository** entre el ViewModel y la base de datos:
-
 ```
-Screen (Composable)  →  ViewModel  →  Repository  →  DAO  →  Room (SQLite)
-   dibuja la UI         estado de      de dónde       consultas
-                        la pantalla    salen los datos SQL
+Screen (Composable) → ViewModel → Repository → Room (SQLite)       login, registro, copia del catálogo
+                                             → Retrofit → Backend   catálogo y reservas
 ```
 
 | Capa | Responsabilidad | Ejemplo |
 |---|---|---|
-| **Screen / Composable** | Dibuja la interfaz y avisa los eventos del usuario. No toca la base de datos. | `ReservaScreen`, `AgendaScreen` |
-| **Model** | Datos que describen el estado de una pantalla (incluye un mensaje de error por campo). | `ReservaModel`, `RegisterModel` |
-| **ViewModel** | Guarda el estado de la pantalla (`mutableStateOf`), valida y decide cuándo pedir datos. | `ReservaViewmodel`, `AdminViewModel` |
-| **Repository** | Único que conoce el DAO. Los ViewModel no saben de dónde vienen los datos. | `ReservaRepository` |
-| **DAO / Entity** | Consultas SQL y tablas de Room. | `ReservaDao`, `ReservaEntity` |
+| **Screen** | Dibuja la interfaz y avisa los eventos. No toca datos. | `ReservaScreen`, `AgendaScreen` |
+| **ViewModel** | Estado de la pantalla, validación, carga y errores. | `ReservaViewModel`, `AdminViewModel` |
+| **Repository** | Único que sabe de dónde vienen los datos (Room o Retrofit). | `ReservaRepository` |
+| **DAO / Api** | Consultas SQL (Room) y endpoints HTTP (Retrofit). | `UserDao`, `ReservaApi` |
 
-**Tres Repository, uno por tabla:**
-
-| Repository | Tabla | Lo usan |
+| Repository | Fuente | Lo usan |
 |---|---|---|
-| `ReservaRepository` | `reservas` | Agenda, Panel admin, Reserva |
-| `ProductoRepository` | `productos` | Catálogo, Detalle, Reserva |
-| `UserRepository` | `users` | Login, Registro, Perfil |
+| `UserRepository` | SQLite (`users`) | Login, Registro, Perfil |
+| `ProductoRepository` | `catalogo-service` + copia en SQLite (`productos`) | Catálogo, Detalle, Reserva |
+| `ReservaRepository` | `reservas-service` | Reserva, Mi Agenda, Panel admin |
 
-Objetos en memoria (no son tablas):
+Objetos en memoria: `Sesion` (correo, nombre y rol del usuario) y `SeleccionEvento` (productos elegidos).
 
-- `Sesion`: correo del usuario con sesión iniciada y si es administradora. Se pierde al cerrar la app.
-- `SeleccionEvento`: ids de los productos que el cliente va eligiendo para su evento.
+Diagramas completos en [`documents/arquitectura.md`](documents/arquitectura.md).
 
 ---
 
@@ -99,20 +100,22 @@ Objetos en memoria (no son tablas):
 com.ban.paoliciassweet
 ├── MainActivity.kt
 ├── data
+│   ├── api            ProductoApi, ReservaApi, RetrofitProducto, RetrofitReserva
 │   ├── local
-│   │   ├── dao         ProductoDao, ReservaDao, UserDao
-│   │   ├── database    AppDatabase
-│   │   ├── entity      ProductoEntity, ReservaEntity, UserEntity
-│   │   └── seed        ProductosIniciales (11 productos de ejemplo)
-│   └── repository      ReservaRepository, ProductoRepository, UserRepository
-├── model               un modelo por pantalla + Sesion + SeleccionEvento
+│   │   ├── dao        UserDao, ProductoDao
+│   │   ├── database   AppDatabase
+│   │   ├── entity     UserEntity (+ Roles), ProductoEntity
+│   │   └── seed       ProductosIniciales (catálogo de respaldo sin conexión)
+│   └── repository     UserRepository, ProductoRepository, ReservaRepository
+├── model              un modelo por pantalla, ProductoRemoto, ReservaRemota, Sesion, SeleccionEvento
+├── util               Seguridad (PBKDF2), Imagenes, Notificaciones, Errores
 └── ui
-    ├── components      BarraInferior, CampoValidado, Header, Footer
-    ├── navigation      AppNavigation (rutas y NavHost)
-    ├── screen          una pantalla por archivo
-    ├── theme           colores, tipografía y tema
-    ├── util            Validaciones, LineaCotizacion, Formato
-    └── viewmodel       un ViewModel por pantalla
+    ├── components     BarraInferior, CampoValidado, Header, Footer
+    ├── navigation     AppNavigation (rutas por rol)
+    ├── screen         una pantalla por archivo
+    ├── theme          colores, tipografía y tema
+    ├── util           Validaciones, Formato
+    └── viewmodel      un ViewModel por pantalla
 ```
 
 ### Pantallas y rutas
@@ -128,60 +131,76 @@ com.ban.paoliciassweet
 | `Perfil` | Perfil y cierre de sesión | Cliente |
 | `Admin` | Panel de administradora | Administradora |
 
+Las pantallas del cliente redirigen al login si no hay sesión, y al panel si entra la administradora.
+Al cerrar sesión se borra el historial de navegación (el botón *Atrás* no vuelve a la sesión cerrada).
+
 ---
 
 ## Cómo ejecutar
 
-1. Abrir el proyecto con **Android Studio** y esperar la sincronización de Gradle.
-2. Ejecutar en un emulador o dispositivo con **Android 8.0 (API 26) o superior**.
-3. La primera vez que se abre el catálogo, la tabla de productos está vacía y se cargan automáticamente los 11 productos de ejemplo.
-4. Para probar como **cliente**: registrar un usuario con datos ficticios e iniciar sesión.
-5. Para probar como **administradora**: registrar el correo `admin@paolicias.cl` e iniciar sesión con él (el sistema la reconoce por ese correo).
+1. Levantar el backend (ver su README): `docker compose up -d --build`.
+2. Abrir este proyecto en **Android Studio** y esperar la sincronización de Gradle.
+3. Ejecutar en un **emulador** (Android 8.0 / API 26 o superior). En *debug* la app usa `http://10.0.2.2:8081/` y `http://10.0.2.2:8082/`, que en el emulador apuntan al computador.
+4. Registrar un **cliente** con datos ficticios, o la **administradora** con `admin@paolicias.cl`.
 
-> **Si cambia una entidad de Room**, hay que subir la versión de `AppDatabase` o desinstalar la app del emulador. La base usa `fallbackToDestructiveMigration`, que **borra y recrea** todas las tablas al subir de versión (solo para desarrollo). Después hay que volver a registrar a la administradora.
+**Cambiar la dirección del backend** sin tocar el código, en `gradle.properties`:
+
+```properties
+API_CATALOGO_DEBUG=http://IP_DE_LA_EC2:8081/
+API_RESERVAS_DEBUG=http://IP_DE_LA_EC2:8082/
+API_URL_RELEASE=https://tu-dominio.duckdns.org/
+```
+
+El APK *release* solo permite **HTTPS** (`network_security_config.xml`). El *debug* permite HTTP para pruebas.
+
+> **Si cambia una entidad de Room**, hay que subir la versión de `AppDatabase` (hoy **7**). Se usa `fallbackToDestructiveMigration`, que borra y recrea las tablas: hay que volver a registrar los usuarios.
+
+---
+
+## APK firmado
+
+1. Crear la llave (una sola vez; **no subirla a GitHub**):
+   ```
+   keytool -genkeypair -v -keystore paolicias-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias paolicias
+   ```
+   (`keytool` viene con Android Studio, en `jbr/bin`). Dejar el `.jks` en la carpeta raíz del proyecto.
+2. Copiar `keystore.properties.example` como `keystore.properties` y completar las claves.
+3. Generar: `./gradlew assembleRelease` → `app/build/outputs/apk/release/app-release.apk`
+   (o en Android Studio: *Build → Generate Signed App Bundle / APK*).
+4. Verificar la firma: `apksigner verify --print-certs app-release.apk`.
+
+`keystore.properties` y `*.jks` están en `.gitignore`.
 
 ---
 
 ## Flujo del abono y estados
 
-El pago no usa pasarela: el cliente transfiere y adjunta el comprobante, y la administradora lo valida a mano. El estado del abono vive **solo** en `ReservaEntity.estadoAbono`.
+El pago no usa pasarela: el cliente transfiere, adjunta el comprobante y la administradora lo valida. El estado vive en `reservas-service`.
 
 ```
-                 el cliente adjunta
-   Pendiente  ───────────────────────►  En revisión
-       ▲                                     │
-       │          la administradora          │
-       └────────────  rechaza  ◄─────────────┤
-                                             │ la administradora valida
-                                             ▼
-                                        Pagado 50%
+Pendiente --(cliente adjunta)--> En revisión --(admin valida)--> Pagado 50% --(admin)--> Completado
+    ^                                 |
+    +--------(admin rechaza)----------+
 ```
 
 | Estado | Qué significa | Qué puede hacer el cliente |
 |---|---|---|
-| `Pendiente` | Reserva creada, sin comprobante (o comprobante rechazado). | Adjuntar comprobante. |
-| `En revisión` | Hay un comprobante esperando validación. | Cambiar el comprobante. |
-| `Pagado 50%` | Abono validado; la fecha queda bloqueada. | El botón de comprobante queda deshabilitado. |
+| `Pendiente` | Reserva creada, sin comprobante (o rechazado). | Adjuntar comprobante. |
+| `En revisión` | Comprobante esperando validación. | Cambiar el comprobante. |
+| `Pagado 50%` | Abono validado; la fecha queda bloqueada. | Nada (ya no se cambia el comprobante). |
+| `Completado` | El evento se realizó. | Nada. |
 
-El caso del ramo también nombra el estado *Completado*; **todavía no está implementado** (ver [Pendiente](#pendiente)).
-
-Al **rechazar**, se borra la ruta del comprobante y la fecha de pago, para que el cliente deba adjuntar uno nuevo.
+Al **rechazar**, el backend borra el comprobante para que el cliente adjunte uno nuevo.
 
 ---
 
-## Reglas de negocio supuestas
+## Reglas de negocio
 
-Estas reglas no vienen del enunciado: son decisiones del equipo y están documentadas aquí.
-
-### Cotización
-
-El total de una reserva se calcula al enviarla y se guarda en `ReservaEntity.total`:
+### Cotización (la calcula `reservas-service` con los precios de `catalogo-service`)
 
 ```
 total = tarifa del servicio (según invitados) + Σ por cada producto: ceil(invitados / porciones) × precio
 ```
-
-**Tarifa del servicio**, escalonada de 10 en 10 invitados (tope 100):
 
 | Invitados | Tarifa | Invitados | Tarifa |
 |---|---|---|---|
@@ -191,119 +210,85 @@ total = tarifa del servicio (según invitados) + Σ por cada producto: ceil(invi
 | 31 – 40 | $100.000 | 81 – 90 | $200.000 |
 | 41 – 50 | $120.000 | 91 – 100 | $220.000 |
 
-Cada producto trae `porciones` = a cuántas personas rinde **una unidad**. Se compran las unidades necesarias para cubrir a todos los invitados (se redondea hacia arriba).
-
-**Ejemplo:** 25 invitados con una *Torta Frutos Rojos* (12 porciones, $45.000):
-
-- Tarifa: 21–30 invitados → $80.000
-- Unidades: ceil(25 / 12) = 3 → 3 × $45.000 = $135.000
-- **Total: $215.000** → abono del 50%: **$107.500**
-
-### Abono
-
-- El abono es el **50% del total** y es obligatorio para bloquear la fecha.
-- Se calcula como `total / 2` (división entera).
+**Ejemplo:** 25 invitados con una *Torta Frutos Rojos* (12 porciones, $45.000): tarifa $80.000 + 3 × $45.000 = **$215.000**, abono **$107.500**.
 
 ### Otras reglas
 
-- **Correo:** al registrar y al iniciar sesión se normaliza con `trim().lowercase()`.
-- **Administradora:** se identifica por el correo fijo `admin@paolicias.cl`.
-- **Fechas:** se guardan como texto `dd/MM/yyyy`. El orden cronológico se logra reordenando el texto como `yyyyMMdd` con `substr` en la consulta SQL.
-- **Selector de fecha:** solo permite desde hoy en adelante.
-- **Estimación de personal e insumos** (panel admin): regla por definir y documentar aquí cuando se implemente.
+- **Abono:** 50% del total, obligatorio para bloquear la fecha.
+- **Correo:** se normaliza con `trim().lowercase()` en la app y en el backend.
+- **Administradora:** la cuenta registrada con `admin@paolicias.cl` recibe el rol `ADMIN` en SQLite.
+- **Doble envío:** el botón se bloquea mientras se envía, el formulario se limpia al terminar y el backend rechaza duplicados (409).
+- **Fechas:** viajan como `dd/MM/yyyy`; el backend las guarda como fechas reales y ordena por fecha y horario.
 
 ---
 
 ## Validación de formularios
 
-Las funciones viven en `ui/util/Validaciones.kt`: cada una devuelve el mensaje de error o `null` si el dato es válido. Los formularios usan el componente `CampoValidado` (campo con borde rojo, mensaje debajo e ícono de error).
+`ui/util/Validaciones.kt` (cada función devuelve el mensaje de error o `null`). El backend repite las reglas de la reserva.
 
 | Formulario | Campo | Regla |
 |---|---|---|
 | Registro | Nombre | Mínimo 3 caracteres; solo letras y espacios |
-| Registro | Correo | Formato válido (`Patterns.EMAIL_ADDRESS`); no puede estar ya registrado |
+| Registro | Correo | Formato válido; no puede estar ya registrado |
 | Registro | Contraseña | Mínimo 6 caracteres |
 | Registro | Repetir contraseña | Debe coincidir |
-| Login | Correo | Formato válido |
-| Login | Contraseña | No vacía |
-| Reserva | Nombre del evento | Mínimo 3 caracteres (acepta números) |
-| Reserva | Fecha | Obligatoria |
-| Reserva | Horario | Obligatorio |
+| Login | Correo / Contraseña | Formato válido / no vacía |
+| Reserva | Nombre del evento | Mínimo 3 caracteres |
+| Reserva | Fecha / Horario | Obligatorios (fecha desde hoy) |
 | Reserva | Invitados | Solo dígitos, entre 1 y 100 |
 
-**Cómo funciona** (igual en las tres pantallas):
-
-1. Cada campo tiene su propio mensaje de error en el modelo de la pantalla (`nombreEventoError`, `emailError`, etc.).
-2. Al tocar el botón se validan **todos los campos a la vez**, para mostrar todos los errores juntos.
-3. Al editar un campo, se borra **solo el error de ese campo**.
+Se validan todos los campos a la vez y, al editar un campo, se borra solo su error. Los errores del servidor (sin conexión, datos rechazados) se muestran en rojo bajo el formulario.
 
 ---
 
-## Persistencia local (Room)
+## Persistencia local (SQLite / Room)
 
-Base de datos `AppDatabase`, **versión 6**, con tres tablas:
+Base `AppDatabase`, **versión 7**:
 
-| Tabla | Entidad | Contenido |
+| Tabla | Entidad | Uso |
 |---|---|---|
-| `users` | `UserEntity` | id, name, email, password |
-| `productos` | `ProductoEntity` | id, nombre, descripcion, categoria, precio, porciones, imagen |
-| `reservas` | `ReservaEntity` | id, nombreEvento, fecha, horario, invitados, observaciones, correoCliente, estadoAbono, productos, total, comprobante, fechaPago |
+| `users` | `UserEntity` | Login y registro de los dos roles: nombre, correo (único), contraseña cifrada, rol |
+| `productos` | `ProductoEntity` | Copia del catálogo del backend (mismos ids), para usar sin conexión |
 
-- `ReservaEntity.productos` guarda los ids de los productos separados por coma.
-- `ReservaEntity.comprobante` guarda la **ruta** de la imagen dentro de `filesDir`, no la imagen.
-- `ProductoEntity.imagen` guarda el nombre del drawable; si no existe, se usa una imagen por defecto.
-- El catálogo se lee como `Flow`, así que la lista se actualiza sola cuando cambia la tabla.
+- Las contraseñas se guardan con **PBKDF2-SHA256 + sal** (`util/Seguridad.kt`), nunca en texto plano.
+- El catálogo se observa como `Flow`: cuando llega la respuesta del backend, la lista se actualiza sola.
 
 ---
 
 ## Recursos nativos
 
-| Recurso | Uso | Permiso |
-|---|---|---|
-| **Vibración** | Vibra al enviar la reserva (`Vibracion.kt`). | `VIBRATE`, declarado en el manifest (es un permiso normal: se concede al instalar). |
-| **Galería** | El cliente elige la imagen del comprobante con el selector de fotos del sistema (`PickVisualMedia`). | Ninguno: el selector del sistema entrega solo la imagen elegida. |
-| **Almacenamiento interno** | La imagen elegida se copia a `filesDir` y se guarda su ruta en la reserva. | Ninguno: es almacenamiento privado de la app. |
+| Rol | Recurso | Uso | Permiso |
+|---|---|---|---|
+| Cliente | **Cámara** | Fotografiar el comprobante (`TakePicture` + `FileProvider`). | Ninguno: usa la app de cámara del sistema. |
+| Cliente | **Galería** | Elegir el comprobante (`PickVisualMedia`). | Ninguno. |
+| Cliente | **Vibración** | Al confirmar la reserva (solo si el servidor la guardó). | `VIBRATE` (normal). |
+| Admin | **Notificaciones** | Aviso de comprobantes por revisar. | `POST_NOTIFICATIONS`, pedido en tiempo de ejecución (Android 13+). Si se niega, el panel funciona igual y se avisa con un mensaje. |
+| Admin | **Vibración** | Al validar o rechazar un abono. | `VIBRATE`. |
+| Admin | **Correo** | Contactar al cliente (`ACTION_SENDTO`). | Ninguno. |
 
-La miniatura del comprobante se carga con `inSampleSize = 4` para no gastar memoria y se muestra con recorte (`ContentScale.Crop`) y alto fijo.
+La foto se reduce a máximo 1600 px y JPEG 80% antes de subirla (~300 KB). La cámara es opcional en el manifest, así que la app se instala también en equipos sin cámara.
 
 ---
 
 ## Animaciones
 
-En las tarjetas de **Mi Agenda**:
+En **Mi Agenda**: el color del estado cambia gradualmente (`animateColorAsState`, 600 ms) y el comprobante aparece con fundido y expansión (`AnimatedVisibility`).
 
-- **Color del estado** (`animateColorAsState`): el texto *Estado del abono* cambia de color de forma gradual (600 ms) según el estado: burdeos (Pendiente), ámbar (En revisión) y verde (Pagado 50%).
-- **Aparición del comprobante** (`AnimatedVisibility`): la imagen entra con fundido y expansión al adjuntarla.
+---
 
-Sirven como retroalimentación visual: el cliente ve que su acción tuvo efecto. El color anima porque la lista usa `key = { it.id }`, así cada tarjeta conserva su identidad al recargar los datos.
+## Pruebas
+
+- App: `./gradlew testDebugUnitTest` (`SeguridadTest`: cifrado de contraseñas).
+- Backend: JUnit 5 + Mockito en cada microservicio (`./mvnw test`), 31 pruebas en total.
 
 ---
 
 ## Limitaciones conocidas
 
-Es un MVP académico. Estas limitaciones están identificadas y no se corrigieron:
-
-- **Contraseñas sin cifrar:** se guardan y comparan en texto plano. Aceptable solo porque los datos son ficticios.
-- **Administradora por correo:** cualquiera que registre `admin@paolicias.cl` queda como administradora.
-- **Sesión en memoria:** `Sesion` no persiste; al cerrar la app hay que volver a iniciar sesión.
-- **Cotización sin desglose para el cliente:** el total se calcula al enviar y se ve en Mi Agenda, pero el formulario no muestra el desglose (tarifa + productos) antes de enviar.
-- **Doble envío:** después de guardar una reserva el formulario no se limpia, y un segundo toque crea una reserva duplicada.
-- **Archivos huérfanos:** al rechazar o cambiar un comprobante, la imagen anterior queda en `filesDir`.
-- **Imágenes de productos:** solo algunos productos tienen su imagen en `drawable`; el resto usa la imagen por defecto.
-- **Nombres de archivo inconsistentes:** por ejemplo, `UsuarioDao.kt` contiene `UserDao` y `AgendaViewModel.kt` contiene `AgendaViewmodel`.
-- **Vibración siempre:** vibra al tocar *Enviar reserva* incluso si el formulario tiene errores.
-
----
-
-## Pendiente
-
-- [ ] Teléfono y empresa en el registro y el perfil (con su validación).
-- [ ] Panel admin: detalle de la reserva y estimación de personal e insumos.
-- [ ] Decidir si se agrega *Marcar completado* para el estado Completado.
-- [ ] Evaluar cámara y notificaciones como recursos nativos adicionales.
-- [ ] Imágenes que faltan en `drawable` y unificar nombres de archivos.
-- [ ] Limpiar comprobantes huérfanos y corregir el doble envío.
-- [ ] Evaluación final: API REST con **Retrofit + Spring Boot**, notificaciones y **APK firmado** en release.
+- **Sesión en memoria:** al cerrar la app hay que volver a iniciar sesión.
+- **Login local:** como pide la rúbrica, las cuentas viven en el SQLite de cada teléfono; el backend no autentica las peticiones.
+- **Administradora por correo:** quien registre `admin@paolicias.cl` en su teléfono queda como administradora en ese teléfono.
+- **Archivos antiguos:** `ProductoRemotoScreen.kt`, `ProductoViewModel.kt` (paquete `com.grupo9`), `LineaCotizacion.kt`, `ReservaDao`/`ReservaEntity` y `SaldoDao`/`SaldoEntity` ya no se usan y se pueden borrar.
 
 ---
 

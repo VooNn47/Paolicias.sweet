@@ -1,26 +1,10 @@
-package com.grupo9.data.api
+package com.ban.paoliciassweet.data.api
 
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import com.ban.paoliciassweet.BuildConfig
 
+// reservas-service
 object RetrofitReserva {
-
-    private const val BASE_URL = "http://100.54.242.126:8082/"
-
-    private val logging = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+    val api: ReservaApi by lazy {
+        crearRetrofit(BuildConfig.RESERVAS_URL).create(ReservaApi::class.java)
     }
-
-    private val client = OkHttpClient.Builder()
-        .addInterceptor(logging)
-        .build()
-
-    val api: ReservaApi = Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .client(client)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-        .create(ReservaApi::class.java)
 }

@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Firma del APK: NUNCA subir la llave ni sus claves
+keystore.properties
+*.jks
+*.keystore

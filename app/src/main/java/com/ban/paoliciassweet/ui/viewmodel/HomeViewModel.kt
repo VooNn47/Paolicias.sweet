@@ -1,30 +1,33 @@
 package com.ban.paoliciassweet.ui.viewmodel
 
-import android.content.Context
-import com.grupo9.data.api.RetrofitProducto
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
 import com.ban.paoliciassweet.data.local.entity.ProductoEntity
 import com.ban.paoliciassweet.data.repository.ProductoRepository
 import com.ban.paoliciassweet.model.HomeModel
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     var uiState by mutableStateOf(HomeModel())
         private set
 
-
     var productos by mutableStateOf<List<ProductoEntity>>(emptyList())
         private set
 
-    private var job: Job? = null
+    var cargando by mutableStateOf(false)
+        private set
 
+    // Aviso cuando no hay conexión y se muestra el catálogo guardado
+    var aviso by mutableStateOf<String?>(null)
+        private set
+
+    private val repositorio = ProductoRepository(AppDatabase.getDatabase(application).productoDao())
 
     val categorias: List<String>
         get() = listOf("Todos") + productos.map { it.categoria }.distinct()
@@ -40,36 +43,21 @@ class HomeViewModel : ViewModel() {
             }
         }
 
+    init {
+        // La lista observa Room; cuando llega el catálogo del backend se actualiza sola
+        viewModelScope.launch {
+            repositorio.obtenerTodos().collect { productos = it }
+        }
+        cargarProductos()
+    }
 
-    private fun repositorio(context: Context) =
-        ProductoRepository(AppDatabase.getDatabase(context).productoDao())
-
-    fun cargarProductos(context: Context) {
-        job?.cancel()
-        job = viewModelScope.launch {
-            // Llena Room (solo si está vacía): el detalle del producto lee de ahí
-            repositorio(context).cargarProductosIniciales()
-
-            try {
-                // 1) Pide los productos al backend (Spring Boot + Postgres)
-                val remotos = RetrofitProducto.api.obtenerProductos()
-                productos = remotos.map { r ->
-                    ProductoEntity(
-                        id = (r.id ?: 0L).toInt(),
-                        nombre = r.nombre,
-                        descripcion = r.descripcion,
-                        categoria = r.categoria,
-                        precio = r.precio,
-                        porciones = r.porciones,
-                        imagen = r.imagen
-                    )
-                }
-            } catch (e: Exception) {
-                // 2) Si no hay conexión, usa los datos locales (Room)
-                repositorio(context).obtenerTodos().collect { lista ->
-                    productos = lista
-                }
-            }
+    fun cargarProductos() {
+        if (cargando) return
+        viewModelScope.launch {
+            cargando = true
+            val conectado = repositorio.sincronizar()
+            aviso = if (conectado) null else "Sin conexión: se muestra el catálogo guardado"
+            cargando = false
         }
     }
 

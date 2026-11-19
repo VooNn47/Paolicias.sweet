@@ -1,19 +1,20 @@
 package com.ban.paoliciassweet.ui.viewmodel
 
-import android.content.Context
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
+import com.ban.paoliciassweet.data.local.entity.Roles
 import com.ban.paoliciassweet.data.repository.UserRepository
 import com.ban.paoliciassweet.model.LoginModel
 import com.ban.paoliciassweet.model.Sesion
 import com.ban.paoliciassweet.ui.util.validarCorreo
 import kotlinx.coroutines.launch
 
-class LoginViewModel : ViewModel() {
+class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     var uiState by mutableStateOf(LoginModel())
         private set
@@ -22,9 +23,11 @@ class LoginViewModel : ViewModel() {
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
+    var cargando by mutableStateOf(false)
+        private set
+
     // El ViewModel no habla con Room: pide los datos al Repository
-    private fun repositorio(context: Context) =
-        UserRepository(AppDatabase.getDatabase(context).userDao())
+    private val repositorio = UserRepository(AppDatabase.getDatabase(application).userDao())
 
     fun onEmailChanged(email: String) {
         uiState = uiState.copy(email = email, emailError = null)
@@ -36,7 +39,8 @@ class LoginViewModel : ViewModel() {
         errorMessage = null
     }
 
-    fun onLoginClick(context: Context, onSuccess: () -> Unit) {
+    fun onLoginClick(onSuccess: () -> Unit) {
+        if (cargando) return
         val state = uiState
 
         // En el login la contraseña solo debe venir completa; el largo mínimo se exige al registrarse
@@ -50,15 +54,19 @@ class LoginViewModel : ViewModel() {
 
         // trim() quita espacios al inicio y al final; lowercase() pasa todo a minúsculas.
         val email = state.email.trim().lowercase()
-        val password = state.password
 
         viewModelScope.launch {
-            val user = repositorio(context).buscarPorCorreo(email)
+            cargando = true
+            val user = repositorio.iniciarSesion(email, state.password)
+            cargando = false
 
-            if (user != null && user.password == password) {
+            if (user != null) {
                 errorMessage = null
-                Sesion.correo = email
-                Sesion.esAdmin = (email == "admin@paolicias.cl")
+                Sesion.correo = user.email
+                Sesion.nombre = user.name
+                // El rol se lee de SQLite (se asignó al registrarse)
+                Sesion.esAdmin = user.rol == Roles.ADMIN
+                uiState = LoginModel()
                 onSuccess()
             } else {
                 errorMessage = "Correo o contraseña incorrectos"

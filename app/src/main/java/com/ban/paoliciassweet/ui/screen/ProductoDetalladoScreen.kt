@@ -20,7 +20,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,10 +40,8 @@ fun ProductoDetalleScreen(
     onVolver: () -> Unit,
     viewModel: ProductoDetalleViewModel = viewModel()
 ) {
-    val context = LocalContext.current
-
     LaunchedEffect(productoId) {
-        viewModel.cargar(context, productoId)
+        viewModel.cargar(productoId)
     }
 
     val producto = viewModel.producto
@@ -60,7 +57,10 @@ fun ProductoDetalleScreen(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "Cargando...", color = MarronSuave)
+                Text(
+                    text = if (viewModel.noEncontrado) "Este producto ya no está disponible." else "Cargando...",
+                    color = MarronSuave
+                )
             }
         } else {
             val agregado = producto.id in SeleccionEvento.productoIds

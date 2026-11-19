@@ -1,13 +1,12 @@
 package com.ban.paoliciassweet.ui.viewmodel
 
-import android.content.Context
+import android.app.Application
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
-import com.ban.paoliciassweet.data.local.entity.UserEntity
 import com.ban.paoliciassweet.data.repository.UserRepository
 import com.ban.paoliciassweet.model.RegisterModel
 import com.ban.paoliciassweet.ui.util.validarClave
@@ -16,32 +15,36 @@ import com.ban.paoliciassweet.ui.util.validarNombre
 import com.ban.paoliciassweet.ui.util.validarRepetirClave
 import kotlinx.coroutines.launch
 
-class RegisterViewModel : ViewModel(){
+class RegisterViewModel(application: Application) : AndroidViewModel(application) {
+
     var uiState by mutableStateOf(RegisterModel())
         private set
 
+    var cargando by mutableStateOf(false)
+        private set
+
     // El ViewModel no habla con Room: pide los datos al Repository
-    private fun repositorio(context: Context) =
-        UserRepository(AppDatabase.getDatabase(context).userDao())
+    private val repositorio = UserRepository(AppDatabase.getDatabase(application).userDao())
 
     // Al escribir en un campo se borra solo el error de ese campo
-    fun onNameChanged(name: String){
+    fun onNameChanged(name: String) {
         uiState = uiState.copy(name = name, nameError = null)
     }
 
-    fun onEmailChanged(email: String){
+    fun onEmailChanged(email: String) {
         uiState = uiState.copy(email = email, emailError = null)
     }
 
-    fun onPasswordChanged(password: String){
+    fun onPasswordChanged(password: String) {
         uiState = uiState.copy(password = password, passwordError = null)
     }
 
-    fun onConfirmPasswordChanged(confirmPassword: String){
+    fun onConfirmPasswordChanged(confirmPassword: String) {
         uiState = uiState.copy(confirmPassword = confirmPassword, confirmPasswordError = null)
     }
 
-    fun onRegisterClick(context: Context, onSuccess: () -> Unit){
+    fun onRegisterClick(onSuccess: () -> Unit) {
+        if (cargando) return
         val state = uiState
 
         // Se validan todos los campos a la vez para mostrar todos los errores juntos
@@ -64,19 +67,15 @@ class RegisterViewModel : ViewModel(){
         val correo = state.email.trim().lowercase()
 
         viewModelScope.launch {
-            val repo = repositorio(context)
-            val existingUser = repo.buscarPorCorreo(correo)
+            cargando = true
+            val creado = repositorio.registrar(state.name.trim(), correo, state.password)
+            cargando = false
 
-            if(existingUser != null) {
-                uiState = uiState.copy(emailError = "Este correo ya está registrado")
-            }else {
-                val newUser = UserEntity(
-                    name = state.name.trim(),
-                    email = correo,
-                    password = state.password
-                )
-                repo.registrar(newUser)
+            if (creado) {
+                uiState = RegisterModel()
                 onSuccess()
+            } else {
+                uiState = uiState.copy(emailError = "Este correo ya está registrado")
             }
         }
     }
