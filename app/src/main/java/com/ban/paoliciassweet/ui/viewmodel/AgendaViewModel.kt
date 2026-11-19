@@ -93,6 +93,28 @@ class AgendaViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // Id de la reserva que se está eliminando (desactiva sus botones mientras tanto)
+    var eliminando by mutableStateOf<Long?>(null)
+        private set
+
+    fun eliminarReserva(reservaId: Long) {
+        if (eliminando != null) return
+        viewModelScope.launch {
+            eliminando = reservaId
+            try {
+                repositorio.eliminar(reservaId)
+                imagenes.remove(reservaId)
+                uiState = uiState.copy(reservas = uiState.reservas.filter { it.id != reservaId })
+                errorMessage = null
+                mensaje = "Reserva eliminada"
+            } catch (e: Exception) {
+                errorMessage = mensajeDeError(e, "No se pudo eliminar la reserva")
+            } finally {
+                eliminando = null
+            }
+        }
+    }
+
     fun mensajeMostrado() {
         mensaje = null
     }

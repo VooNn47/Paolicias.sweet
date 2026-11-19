@@ -25,8 +25,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -87,6 +89,9 @@ fun AgendaScreen(
     // Id de la reserva a la que se le está adjuntando el comprobante (sobrevive al girar la pantalla)
     var reservaElegida by rememberSaveable { mutableStateOf<Long?>(null) }
     var uriFoto by rememberSaveable { mutableStateOf<Uri?>(null) }
+
+    // Reserva que el cliente quiere eliminar (abre el diálogo de confirmación)
+    var reservaAEliminar by remember { mutableStateOf<ReservaRemota?>(null) }
 
     LaunchedEffect(Unit) {
         agendaViewModel.cargarReservas()
@@ -222,16 +227,44 @@ fun AgendaScreen(
                                 )
                             },
                             onCamara = { abrirCamara(reserva.id) },
-                            tasaDolar = agendaViewModel.tasaDolar
+                            tasaDolar = agendaViewModel.tasaDolar,
+                            eliminando = agendaViewModel.eliminando == reserva.id,
+                            onEliminar = { reservaAEliminar = reserva }
                         )
                     }
                 }
             }
         }
     }
+
+    // Confirmación antes de eliminar: borrar una reserva no se puede deshacer
+    reservaAEliminar?.let { reserva ->
+        val abonoValidado = reserva.estadoAbono == EstadoAbono.PAGADO ||
+                reserva.estadoAbono == EstadoAbono.COMPLETADO
+        AlertDialog(
+            onDismissRequest = { reservaAEliminar = null },
+            title = { Text("¿Eliminar reserva?") },
+            text = {
+                Text(
+                    "Se eliminará \"${reserva.nombreEvento}\" del ${reserva.fecha} y su comprobante. " +
+                            "Esta acción no se puede deshacer." +
+                            if (abonoValidado) "\n\nOjo: el abono de esta reserva ya fue validado por la banquetería." else ""
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    agendaViewModel.eliminarReserva(reserva.id)
+                    reservaAEliminar = null
+                }) { Text("Eliminar", color = Color(0xFFC62828)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { reservaAEliminar = null }) { Text("Cancelar") }
+            }
+        )
+    }
 }
 
-// Tarjeta de una reserva. Cada una tiene sus botones para adjuntar el comprobante.
+// Tarjeta de una reserva. Cada una tiene sus botones para adjuntar el comprobante y para eliminarla.
 @Composable
 private fun TarjetaReserva(
     reserva: ReservaRemota,
@@ -239,7 +272,9 @@ private fun TarjetaReserva(
     subiendo: Boolean,
     onGaleria: () -> Unit,
     onCamara: () -> Unit,
-    tasaDolar: Double? = null
+    tasaDolar: Double? = null,
+    eliminando: Boolean = false,
+    onEliminar: () -> Unit = {}
 ) {
     // ANIMACIÓN 1: el color del estado cambia de forma gradual (600 ms) en vez de saltar
     val colorEstado by animateColorAsState(
@@ -343,6 +378,26 @@ private fun TarjetaReserva(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Galería")
                     }
+                }
+            }
+
+            // Eliminar la reserva (pide confirmación antes)
+            TextButton(
+                onClick = onEliminar,
+                enabled = !eliminando && !subiendo,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (eliminando) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = null,
+                        tint = Color(0xFFC62828),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Eliminar reserva", color = Color(0xFFC62828))
                 }
             }
         }

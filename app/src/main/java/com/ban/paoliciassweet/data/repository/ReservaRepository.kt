@@ -41,4 +41,6 @@ class ReservaRepository(private val api: ReservaApi = RetrofitReserva.api) {
     suspend fun rechazarAbono(id: Long): ReservaRemota = api.rechazarAbono(id)
 
     suspend fun completar(id: Long): ReservaRemota = api.completarReserva(id)
+
+    suspend fun eliminar(id: Long) = api.eliminarReserva(id)
 }

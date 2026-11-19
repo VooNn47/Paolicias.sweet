@@ -40,6 +40,7 @@ Proyecto del ramo **DSY1105 – Desarrollo de Aplicaciones Móviles** (Duoc UC),
 - **Mi Agenda**: sus reservas desde `reservas-service`, ordenadas por fecha, con precio, abono y estado. El precio también se muestra en dólares (API externa ExchangeRate-API).
 - **Aviso de feriado**: al elegir la fecha, la app avisa si es feriado en Chile (API externa Nager.Date).
 - **Comprobante** de transferencia con la **cámara** o desde la **galería**; se sube al backend.
+- **Eliminar reserva** desde Mi Agenda, con confirmación (`DELETE /api/reservas/{id}`; el backend borra también el comprobante).
 - **Perfil** con sus datos y cierre de sesión.
 
 ### Administradora

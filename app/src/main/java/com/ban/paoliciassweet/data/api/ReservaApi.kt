@@ -6,6 +6,7 @@ import com.ban.paoliciassweet.model.ReservaRemota
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.PATCH
@@ -50,4 +51,8 @@ interface ReservaApi {
 
     @PATCH("api/reservas/{id}/completar")
     suspend fun completarReserva(@Path("id") id: Long): ReservaRemota
+
+    // El cliente elimina su reserva (el backend borra también el comprobante)
+    @DELETE("api/reservas/{id}")
+    suspend fun eliminarReserva(@Path("id") id: Long)
 }
