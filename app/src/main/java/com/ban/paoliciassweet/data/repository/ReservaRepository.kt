@@ -2,8 +2,7 @@ package com.ban.paoliciassweet.data.repository
 
 import com.ban.paoliciassweet.data.api.ReservaApi
 import com.ban.paoliciassweet.data.api.RetrofitReserva
-import com.ban.paoliciassweet.model.Cotizacion
-import com.ban.paoliciassweet.model.CotizacionRequest
+import com.ban.paoliciassweet.model.CalculoInsumos
 import com.ban.paoliciassweet.model.NuevaReserva
 import com.ban.paoliciassweet.model.ReservaRemota
 import kotlinx.coroutines.Dispatchers
@@ -17,9 +16,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class ReservaRepository(private val api: ReservaApi = RetrofitReserva.api) {
 
     suspend fun crear(reserva: NuevaReserva): ReservaRemota = api.crearReserva(reserva)
-
-    suspend fun cotizar(invitados: Int, productoIds: List<Long>): Cotizacion =
-        api.cotizar(CotizacionRequest(invitados, productoIds))
 
     suspend fun misReservas(correo: String): List<ReservaRemota> = api.obtenerReservas(correo = correo)
 
@@ -37,6 +33,8 @@ class ReservaRepository(private val api: ReservaApi = RetrofitReserva.api) {
     suspend fun comprobante(id: Long): ByteArray = withContext(Dispatchers.IO) {
         api.obtenerComprobante(id).use { it.bytes() }
     }
+
+    suspend fun calcularInsumos(id: Long): CalculoInsumos = api.calcularInsumos(id)
 
     suspend fun validarAbono(id: Long): ReservaRemota = api.validarAbono(id)
 

@@ -8,6 +8,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ban.paoliciassweet.data.local.database.AppDatabase
 import com.ban.paoliciassweet.data.local.entity.ProductoEntity
+import com.ban.paoliciassweet.data.repository.CotizacionRepository
+import com.ban.paoliciassweet.data.repository.ExternasRepository
 import com.ban.paoliciassweet.data.repository.ProductoRepository
 import com.ban.paoliciassweet.data.repository.ReservaRepository
 import com.ban.paoliciassweet.model.Cotizacion
@@ -51,8 +53,21 @@ class ReservaViewModel(application: Application) : AndroidViewModel(application)
 
     private var jobCotizacion: Job? = null
 
+    // Aviso cuando la fecha elegida es feriado (API externa Nager.Date)
+    var avisoFeriado by mutableStateOf<String?>(null)
+        private set
+
+    // Dólares por 1 peso, para mostrar el total en USD (API externa ExchangeRate-API)
+    var tasaDolar by mutableStateOf<Double?>(null)
+        private set
+
+    init {
+        viewModelScope.launch { tasaDolar = ExternasRepository.tasaDolar() }
+    }
+
     private val productoRepositorio = ProductoRepository(AppDatabase.getDatabase(application).productoDao())
     private val reservaRepositorio = ReservaRepository()
+    private val cotizacionRepositorio = CotizacionRepository()
 
     fun onNombreEventoChanged(nombre: String) {
         uiState = uiState.copy(nombreEvento = nombre, nombreEventoError = null)
@@ -60,6 +75,20 @@ class ReservaViewModel(application: Application) : AndroidViewModel(application)
 
     fun onFechaChanged(fecha: String) {
         uiState = uiState.copy(fecha = fecha, fechaError = null)
+        revisarFeriado(fecha)
+    }
+
+    // API externa (Nager.Date): avisa si la fecha elegida es feriado en Chile
+    private fun revisarFeriado(fecha: String) {
+        avisoFeriado = null
+        viewModelScope.launch {
+            val feriado = ExternasRepository.feriadoDe(fecha)
+            // Solo se muestra si la fecha no cambió mientras se consultaba
+            if (feriado != null && uiState.fecha == fecha) {
+                avisoFeriado = "$fecha es feriado en Chile (${feriado.localName}). " +
+                        "Confirma con la banquetería la disponibilidad de personal."
+            }
+        }
     }
 
     fun onHorarioChanged(horario: String) {
@@ -95,7 +124,7 @@ class ReservaViewModel(application: Application) : AndroidViewModel(application)
         jobCotizacion = viewModelScope.launch {
             delay(400)
             try {
-                cotizacion = reservaRepositorio.cotizar(cantidad, productosElegidos.map { it.id.toLong() })
+                cotizacion = cotizacionRepositorio.cotizar(cantidad, productosElegidos.map { it.id.toLong() })
                 cotizacionError = null
             } catch (e: Exception) {
                 cotizacion = null
@@ -144,6 +173,7 @@ class ReservaViewModel(application: Application) : AndroidViewModel(application)
                         "Paga el abono de ${formatoPrecio(creada.abono)} y adjunta el comprobante en Mi Agenda."
                 // Formulario limpio: un segundo toque ya no duplica la reserva
                 uiState = ReservaModel()
+                avisoFeriado = null
                 SeleccionEvento.limpiar()
                 productosElegidos = emptyList()
                 cotizacion = null
