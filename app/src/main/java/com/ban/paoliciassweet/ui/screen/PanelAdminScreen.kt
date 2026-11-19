@@ -196,6 +196,15 @@ private fun TarjetaAdmin(
             Spacer(modifier = Modifier.height(8.dp))
             Text("Cliente: ${reserva.correoCliente}")
             Text("${reserva.fecha} - ${reserva.horario}")
+            // API externa (Nager.Date): aviso si el evento cae en feriado
+            viewModel.feriados[reserva.id]?.let { nombre ->
+                Text(
+                    text = "⚠ Feriado: $nombre (revisar disponibilidad de personal)",
+                    color = Color(0xFFB26A00),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
             Text("Invitados: ${reserva.invitados}")
             if (!reserva.observaciones.isNullOrBlank()) {
                 Text("Observaciones: ${reserva.observaciones}")

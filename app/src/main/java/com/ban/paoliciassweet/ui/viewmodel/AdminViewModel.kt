@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.ban.paoliciassweet.data.repository.ExternasRepository
 import com.ban.paoliciassweet.data.repository.ReservaRepository
 import com.ban.paoliciassweet.model.CalculoInsumos
 import com.ban.paoliciassweet.model.EstadoAbono
@@ -45,8 +46,22 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
     var calculando by mutableStateOf<Long?>(null)
         private set
 
+    // Nombre del feriado de cada reserva que cae en feriado (API externa Nager.Date)
+    val feriados = mutableStateMapOf<Long, String>()
+
     // Para no repetir la notificación si la cantidad no cambió
     private var ultimoAviso = 0
+
+    // Marca las reservas que caen en feriado: ese día puede costar más conseguir personal.
+    // Si la API externa no responde, simplemente no se marca nada.
+    private fun marcarFeriados() {
+        val lista = reservas
+        viewModelScope.launch {
+            for (r in lista) {
+                ExternasRepository.feriadoDe(r.fecha)?.let { feriados[r.id] = it.localName }
+            }
+        }
+    }
 
     private val repositorio = ReservaRepository()
 
@@ -80,6 +95,7 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 reservas = repositorio.todas(uiState.filtro)
                 errorMessage = null
+                marcarFeriados()
                 revisarPendientes()
             } catch (e: Exception) {
                 errorMessage = mensajeDeError(e, "No se pudieron cargar las reservas")

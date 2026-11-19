@@ -66,6 +66,7 @@ import com.ban.paoliciassweet.ui.theme.Burdeos
 import com.ban.paoliciassweet.ui.theme.MarronSuave
 import com.ban.paoliciassweet.ui.util.formatoPrecio
 import com.ban.paoliciassweet.ui.viewmodel.AgendaViewModel
+import com.ban.paoliciassweet.util.Externas
 import java.io.File
 
 // Colores del texto "Estado del abono" según el estado (la animación viaja entre ellos)
@@ -220,7 +221,8 @@ fun AgendaScreen(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                 )
                             },
-                            onCamara = { abrirCamara(reserva.id) }
+                            onCamara = { abrirCamara(reserva.id) },
+                            tasaDolar = agendaViewModel.tasaDolar
                         )
                     }
                 }
@@ -236,7 +238,8 @@ private fun TarjetaReserva(
     imagen: ImageBitmap?,
     subiendo: Boolean,
     onGaleria: () -> Unit,
-    onCamara: () -> Unit
+    onCamara: () -> Unit,
+    tasaDolar: Double? = null
 ) {
     // ANIMACIÓN 1: el color del estado cambia de forma gradual (600 ms) en vez de saltar
     val colorEstado by animateColorAsState(
@@ -284,6 +287,15 @@ private fun TarjetaReserva(
                 text = "Abono (50%): ${formatoPrecio(reserva.abono)}",
                 fontSize = 15.sp
             )
+            // API externa (ExchangeRate-API): referencia en dólares con el valor del día
+            if (tasaDolar != null) {
+                Text(
+                    text = "≈ ${Externas.formatoDolar(Externas.aDolares(reserva.total, tasaDolar))} " +
+                            "(abono ≈ ${Externas.formatoDolar(Externas.aDolares(reserva.abono, tasaDolar))})",
+                    fontSize = 13.sp,
+                    color = MarronSuave
+                )
+            }
             Text(
                 text = "Estado del abono: ${reserva.estadoAbono}",
                 fontSize = 15.sp,

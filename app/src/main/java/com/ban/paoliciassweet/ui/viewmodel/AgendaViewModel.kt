@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.ban.paoliciassweet.data.repository.ExternasRepository
 import com.ban.paoliciassweet.data.repository.ReservaRepository
 import com.ban.paoliciassweet.model.AgendaModel
 import com.ban.paoliciassweet.model.Sesion
@@ -37,7 +38,15 @@ class AgendaViewModel(application: Application) : AndroidViewModel(application) 
     // Miniaturas de los comprobantes ya descargados, por id de reserva
     val imagenes = mutableStateMapOf<Long, ImageBitmap>()
 
+    // Dólares por 1 peso (API externa ExchangeRate-API), para mostrar el precio en USD
+    var tasaDolar by mutableStateOf<Double?>(null)
+        private set
+
     private val repositorio = ReservaRepository()
+
+    init {
+        viewModelScope.launch { tasaDolar = ExternasRepository.tasaDolar() }
+    }
 
     fun cargarReservas() {
         viewModelScope.launch {
