@@ -320,6 +320,12 @@ En **Mi Agenda**: el color del estado cambia gradualmente (`animateColorAsState`
 
 ## Equipo y seguimiento
 
-- **Equipo:** _(completar nombres)_
-- **Tablero Trello:** _(completar enlace)_
+| Integrante | Usuario GitHub |
+|---|---|
+| Ian Muñoz | [VooNn47](https://github.com/VooNn47) |
+| Alexander Heredia | [alheredia-cloud](https://github.com/alheredia-cloud) |
+| Bastian Canales | [BastyYisus](https://github.com/BastyYisus) |
+
+- **Tablero Trello:** https://trello.com/b/VhJgbjqS/banqueteriatrello
+- **Repositorio del backend:** https://github.com/VooNn47/Paolicias.sweet-backend
 - **Convención de commits:** un commit pequeño por cambio, con prefijo `feat:`, `fix:` o `refactor:`.
