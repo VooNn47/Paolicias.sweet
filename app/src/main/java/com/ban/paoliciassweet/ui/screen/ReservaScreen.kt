@@ -57,6 +57,7 @@ import com.ban.paoliciassweet.ui.theme.BlancoHueso
 import com.ban.paoliciassweet.ui.theme.Burdeos
 import com.ban.paoliciassweet.ui.theme.MarronSuave
 import com.ban.paoliciassweet.ui.util.formatoPrecio
+import com.ban.paoliciassweet.util.Externas
 import com.ban.paoliciassweet.ui.viewmodel.ReservaViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -209,6 +210,21 @@ fun ReservaScreen(
                 }
             )
 
+            // API externa (Nager.Date): aviso si la fecha es feriado en Chile
+            reservaViewModel.avisoFeriado?.let { aviso ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0))
+                ) {
+                    Text(
+                        text = "⚠ $aviso",
+                        color = Color(0xFFB26A00),
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+
             CampoValidado(
                 value = uiState.horario,
                 onValueChange = {},
@@ -237,11 +253,15 @@ fun ReservaScreen(
                 value = uiState.observaciones,
                 onValueChange = { reservaViewModel.onObservacionesChanged(it) },
                 label = { Text("Observaciones") },
+                supportingText = { Text("Ej: 1 solo pastel de papa", color = Color.Gray) },
                 modifier = Modifier.fillMaxWidth()
             )
 
             // Desglose calculado por el backend (tarifa + productos) antes de enviar
-            reservaViewModel.cotizacion?.let { TarjetaCotizacion(it) }
+            reservaViewModel.cotizacion?.let { TarjetaCotizacion(it, reservaViewModel.tasaDolar) }
+
+            // A qué cuenta transferir el abono (datos ficticios del proyecto)
+            TarjetaTransferencia(abono = reservaViewModel.cotizacion?.abono)
             reservaViewModel.cotizacionError?.let {
                 Text(text = it, color = MarronSuave, fontSize = 13.sp)
             }
@@ -274,7 +294,7 @@ fun ReservaScreen(
 }
 
 @Composable
-private fun TarjetaCotizacion(c: Cotizacion) {
+private fun TarjetaCotizacion(c: Cotizacion, tasaDolar: Double?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = BlancoHueso),
@@ -289,6 +309,51 @@ private fun TarjetaCotizacion(c: Cotizacion) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             FilaPrecio("Total", c.total, negrita = true)
             FilaPrecio("Abono para reservar (50%)", c.abono, negrita = true)
+            // API externa (ExchangeRate-API): referencia en dólares con el valor del día
+            if (tasaDolar != null) {
+                Text(
+                    text = "≈ ${Externas.formatoDolar(Externas.aDolares(c.total, tasaDolar))} " +
+                            "(1 USD = ${formatoPrecio(Externas.pesosPorDolar(tasaDolar))})",
+                    fontSize = 12.sp,
+                    color = MarronSuave
+                )
+                Text("Tipo de cambio: ExchangeRate-API", fontSize = 10.sp, color = MarronSuave)
+            }
+        }
+    }
+}
+
+// Datos para transferir el abono. Son FICTICIOS: el proyecto no procesa pagos reales.
+private val DATOS_TRANSFERENCIA = listOf(
+    "Titular" to "Paolicias.Sweet Banquetería",
+    "RUT" to "11.111.111-1",
+    "Banco" to "Banco de Prueba",
+    "Tipo de cuenta" to "Cuenta corriente",
+    "N° de cuenta" to "0000-123456",
+    "Correo" to "pagos@paolicias.cl"
+)
+
+@Composable
+private fun TarjetaTransferencia(abono: Int?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = BlancoHueso),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Datos para transferir el abono", fontWeight = FontWeight.Bold, color = Burdeos)
+            DATOS_TRANSFERENCIA.forEach { (dato, valor) ->
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(dato, fontSize = 14.sp, color = MarronSuave)
+                    Text(valor, fontSize = 14.sp)
+                }
+            }
+            abono?.let { FilaPrecio("Monto a transferir (50%)", it, negrita = true) }
+            Text(
+                "Datos ficticios de ejemplo. Después de enviar la reserva, adjunta el comprobante en Mi Agenda.",
+                fontSize = 12.sp,
+                color = MarronSuave
+            )
         }
     }
 }

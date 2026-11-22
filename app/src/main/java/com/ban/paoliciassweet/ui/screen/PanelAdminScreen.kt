@@ -18,12 +18,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -40,13 +43,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ban.paoliciassweet.model.CalculoInsumos
 import com.ban.paoliciassweet.model.EstadoAbono
 import com.ban.paoliciassweet.model.ReservaRemota
 import com.ban.paoliciassweet.ui.components.Footer
 import com.ban.paoliciassweet.ui.components.Header
 import com.ban.paoliciassweet.ui.theme.Burdeos
 import com.ban.paoliciassweet.ui.theme.MarronSuave
+import com.ban.paoliciassweet.ui.util.formatoCantidad
 import com.ban.paoliciassweet.ui.util.formatoPrecio
+import com.ban.paoliciassweet.ui.util.textoProductos
 import com.ban.paoliciassweet.ui.viewmodel.AdminViewModel
 import com.ban.paoliciassweet.util.Notificaciones
 
@@ -57,6 +63,7 @@ private val FILTROS = listOf(
 @Composable
 fun PanelAdminScreen(
     onLogout: () -> Unit,
+    onVerInsumos: () -> Unit = {},
     viewModel: AdminViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -96,9 +103,13 @@ fun PanelAdminScreen(
                 OutlinedButton(onClick = { viewModel.cargarReservas() }, modifier = Modifier.weight(1f)) {
                     Text("Actualizar")
                 }
+                // Inventario de insumos de la administradora
+                Button(onClick = onVerInsumos, modifier = Modifier.weight(1f)) {
+                    Text("Insumos")
+                }
                 // Cerrar sesión (AppNavigation limpia la sesión y el historial)
-                Button(onClick = onLogout, modifier = Modifier.weight(1f)) {
-                    Text("Cerrar sesión")
+                OutlinedButton(onClick = onLogout, modifier = Modifier.weight(1f)) {
+                    Text("Salir")
                 }
             }
 
@@ -186,7 +197,20 @@ private fun TarjetaAdmin(
             Spacer(modifier = Modifier.height(8.dp))
             Text("Cliente: ${reserva.correoCliente}")
             Text("${reserva.fecha} - ${reserva.horario}")
+            // API externa (Nager.Date): aviso si el evento cae en feriado
+            viewModel.feriados[reserva.id]?.let { nombre ->
+                Text(
+                    text = "⚠ Feriado: $nombre (revisar disponibilidad de personal)",
+                    color = Color(0xFFB26A00),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
             Text("Invitados: ${reserva.invitados}")
+            Text(
+                "Productos: ${textoProductos(reserva.productos, reserva.invitados, viewModel.catalogo)}",
+                fontWeight = FontWeight.SemiBold
+            )
             if (!reserva.observaciones.isNullOrBlank()) {
                 Text("Observaciones: ${reserva.observaciones}")
             }
@@ -214,6 +238,23 @@ private fun TarjetaAdmin(
                 }
             } else {
                 Text("Sin comprobante adjunto", color = MarronSuave)
+            }
+
+            // Antes de aceptar o rechazar: ¿alcanza el inventario para esta reserva?
+            if (reserva.estadoAbono == EstadoAbono.PENDIENTE || reserva.estadoAbono == EstadoAbono.EN_REVISION) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { viewModel.calcularInsumos(reserva.id) },
+                    enabled = viewModel.calculando == null,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (viewModel.calculando == reserva.id) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Calcular insumos")
+                    }
+                }
+                viewModel.calculos[reserva.id]?.let { TarjetaInsumos(it) }
             }
 
             // Solo se puede validar o rechazar cuando el cliente ya adjuntó el comprobante
@@ -262,6 +303,41 @@ private fun TarjetaAdmin(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Contactar cliente por correo")
+            }
+        }
+    }
+}
+
+// Resultado de "Calcular insumos": si se puede realizar y qué falta
+@Composable
+private fun TarjetaInsumos(calculo: CalculoInsumos) {
+    val verde = Color(0xFF2E7D32)
+    val rojo = Color(0xFFC62828)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = if (calculo.alcanza) Color(0xFFE8F5E9) else Color(0xFFFFEBEE))
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = if (calculo.alcanza) "✔ Hay insumos suficientes: se puede realizar la reserva"
+                else "✖ Faltan insumos para esta reserva",
+                fontWeight = FontWeight.Bold,
+                color = if (calculo.alcanza) verde else rojo
+            )
+            if (calculo.insumos.isEmpty()) {
+                Text("Esta reserva no lleva productos con receta.", fontSize = 13.sp, color = MarronSuave)
+            }
+            calculo.insumos.forEach { i ->
+                val falta = i.faltante > 0
+                Text(
+                    text = "${i.nombre}: necesita ${formatoCantidad(i.necesario)} ${i.unidad} · hay ${formatoCantidad(i.stock)}" +
+                            if (falta) " · faltan ${formatoCantidad(i.faltante)}" else "",
+                    fontSize = 13.sp,
+                    color = if (falta) rojo else Color.Unspecified,
+                    fontWeight = if (falta) FontWeight.Bold else FontWeight.Normal
+                )
             }
         }
     }

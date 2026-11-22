@@ -1,12 +1,12 @@
 package com.ban.paoliciassweet.data.api
 
-import com.ban.paoliciassweet.model.Cotizacion
-import com.ban.paoliciassweet.model.CotizacionRequest
+import com.ban.paoliciassweet.model.CalculoInsumos
 import com.ban.paoliciassweet.model.NuevaReserva
 import com.ban.paoliciassweet.model.ReservaRemota
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.PATCH
@@ -28,9 +28,6 @@ interface ReservaApi {
     @POST("api/reservas")
     suspend fun crearReserva(@Body reserva: NuevaReserva): ReservaRemota
 
-    @POST("api/cotizacion")
-    suspend fun cotizar(@Body request: CotizacionRequest): Cotizacion
-
     @Multipart
     @POST("api/reservas/{id}/comprobante")
     suspend fun subirComprobante(
@@ -42,6 +39,10 @@ interface ReservaApi {
     @GET("api/reservas/{id}/comprobante")
     suspend fun obtenerComprobante(@Path("id") id: Long): ResponseBody
 
+    // Botón "Calcular insumos" del panel admin
+    @GET("api/reservas/{id}/insumos")
+    suspend fun calcularInsumos(@Path("id") id: Long): CalculoInsumos
+
     @PATCH("api/reservas/{id}/validar")
     suspend fun validarAbono(@Path("id") id: Long): ReservaRemota
 
@@ -50,4 +51,8 @@ interface ReservaApi {
 
     @PATCH("api/reservas/{id}/completar")
     suspend fun completarReserva(@Path("id") id: Long): ReservaRemota
+
+    // El cliente elimina su reserva (el backend borra también el comprobante)
+    @DELETE("api/reservas/{id}")
+    suspend fun eliminarReserva(@Path("id") id: Long)
 }

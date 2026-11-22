@@ -8,7 +8,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.ban.paoliciassweet.data.local.database.AppDatabase
+import com.ban.paoliciassweet.data.local.entity.ProductoEntity
+import com.ban.paoliciassweet.data.repository.ExternasRepository
+import com.ban.paoliciassweet.data.repository.ProductoRepository
 import com.ban.paoliciassweet.data.repository.ReservaRepository
+import com.ban.paoliciassweet.model.CalculoInsumos
 import com.ban.paoliciassweet.model.EstadoAbono
 import com.ban.paoliciassweet.model.PanelAdminModel
 import com.ban.paoliciassweet.model.ReservaRemota
@@ -37,10 +42,61 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
 
     val imagenes = mutableStateMapOf<Long, ImageBitmap>()
 
+    // Resultado de "Calcular insumos" por id de reserva
+    val calculos = mutableStateMapOf<Long, CalculoInsumos>()
+
+    // Id de la reserva cuyo cálculo de insumos está en curso
+    var calculando by mutableStateOf<Long?>(null)
+        private set
+
+    // Nombre del feriado de cada reserva que cae en feriado (API externa Nager.Date)
+    val feriados = mutableStateMapOf<Long, String>()
+
     // Para no repetir la notificación si la cantidad no cambió
     private var ultimoAviso = 0
 
+    // Marca las reservas que caen en feriado: ese día puede costar más conseguir personal.
+    // Si la API externa no responde, simplemente no se marca nada.
+    private fun marcarFeriados() {
+        val lista = reservas
+        viewModelScope.launch {
+            for (r in lista) {
+                ExternasRepository.feriadoDe(r.fecha)?.let { feriados[r.id] = it.localName }
+            }
+        }
+    }
+
     private val repositorio = ReservaRepository()
+
+    // Catálogo por id, para mostrar qué productos pidió el cliente en cada reserva
+    var catalogo by mutableStateOf<Map<Int, ProductoEntity>>(emptyMap())
+        private set
+
+    private val productoRepositorio = ProductoRepository(AppDatabase.getDatabase(application).productoDao())
+
+    init {
+        // Room tiene la copia local del catálogo; se actualiza con catalogo-service
+        viewModelScope.launch {
+            productoRepositorio.obtenerTodos().collect { lista -> catalogo = lista.associateBy { it.id } }
+        }
+        viewModelScope.launch { productoRepositorio.sincronizar() }
+    }
+
+    // Pregunta a reservas-service (que consulta a insumos-service) si alcanza el inventario
+    fun calcularInsumos(id: Long) {
+        if (calculando != null) return
+        viewModelScope.launch {
+            calculando = id
+            try {
+                calculos[id] = repositorio.calcularInsumos(id)
+                errorMessage = null
+            } catch (e: Exception) {
+                errorMessage = mensajeDeError(e, "No se pudieron calcular los insumos")
+            } finally {
+                calculando = null
+            }
+        }
+    }
 
     fun onFiltroChanged(filtro: String) {
         uiState = uiState.copy(filtro = filtro)
@@ -56,6 +112,7 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 reservas = repositorio.todas(uiState.filtro)
                 errorMessage = null
+                marcarFeriados()
                 revisarPendientes()
             } catch (e: Exception) {
                 errorMessage = mensajeDeError(e, "No se pudieron cargar las reservas")
@@ -102,6 +159,7 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
             procesando = id
             try {
                 accion()
+                calculos.remove(id) // el stock cambió: el cálculo anterior ya no sirve
                 errorMessage = null
                 onExito()
                 reservas = repositorio.todas(uiState.filtro)

@@ -9,12 +9,14 @@ plugins {
 
 // Direcciones del backend. Se pueden cambiar en gradle.properties sin tocar el código.
 //   Debug (emulador): 10.0.2.2 es el "localhost" del computador.
-//   Release: la URL HTTPS de la EC2 (Caddy reparte /api/productos y /api/reservas).
+//   Release: la URL HTTPS de la EC2 (Caddy reparte /api/productos, /api/cotizacion, /api/reservas e /api/insumos).
 fun propiedad(nombre: String, porDefecto: String): String =
     providers.gradleProperty(nombre).getOrElse(porDefecto)
 
 val catalogoDebug = propiedad("API_CATALOGO_DEBUG", "http://10.0.2.2:8081/")
 val reservasDebug = propiedad("API_RESERVAS_DEBUG", "http://10.0.2.2:8082/")
+val cotizacionDebug = propiedad("API_COTIZACION_DEBUG", "http://10.0.2.2:8083/")
+val insumosDebug = propiedad("API_INSUMOS_DEBUG", "http://10.0.2.2:8084/")
 val apiRelease = propiedad("API_URL_RELEASE", "https://paolicias.duckdns.org/")
 
 // Firma del APK: los datos van en keystore.properties (NO se sube a GitHub).
@@ -34,8 +36,8 @@ android {
         applicationId = "com.ban.paoliciassweet"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -55,10 +57,14 @@ android {
         debug {
             buildConfigField("String", "CATALOGO_URL", "\"$catalogoDebug\"")
             buildConfigField("String", "RESERVAS_URL", "\"$reservasDebug\"")
+            buildConfigField("String", "COTIZACION_URL", "\"$cotizacionDebug\"")
+            buildConfigField("String", "INSUMOS_URL", "\"$insumosDebug\"")
         }
         release {
             buildConfigField("String", "CATALOGO_URL", "\"$apiRelease\"")
             buildConfigField("String", "RESERVAS_URL", "\"$apiRelease\"")
+            buildConfigField("String", "COTIZACION_URL", "\"$apiRelease\"")
+            buildConfigField("String", "INSUMOS_URL", "\"$apiRelease\"")
             if (archivoFirma.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }

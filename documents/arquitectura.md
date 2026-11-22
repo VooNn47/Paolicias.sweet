@@ -17,17 +17,28 @@ flowchart LR
     subgraph Nube["AWS EC2 – Docker (un contenedor por microservicio)"]
         CADDY["Caddy<br/>HTTPS :443"]
         CAT["catalogo-service<br/>Spring Boot + JPA<br/>:8081"]
+        COT["cotizacion-service<br/>Spring Boot + JPA<br/>:8083"]
+        INS["insumos-service<br/>Spring Boot + JPA<br/>:8084"]
         RES["reservas-service<br/>Spring Boot + JPA<br/>:8082"]
-        PG[("PostgreSQL<br/>paolicias_db<br/>productos · reservas")]
+        PG[("PostgreSQL<br/>paolicias_db<br/>productos · tarifas · reservas<br/>insumos · recetas · consumos")]
         VOL[["Volumen<br/>comprobantes"]]
     end
 
     RET -- "/api/productos" --> CADDY
-    RET -- "/api/reservas · /api/cotizacion" --> CADDY
+    RET -- "/api/cotizacion" --> CADDY
+    RET -- "/api/reservas" --> CADDY
+    RET -- "/api/insumos" --> CADDY
+    RET -- "HTTPS (APIs de terceros)" --> EXT["APIs externas<br/>Nager.Date (feriados)<br/>ExchangeRate-API (dólar)"]
     CADDY --> CAT
+    CADDY --> COT
     CADDY --> RES
-    RES -- "precios (HTTP interno)" --> CAT
+    CADDY --> INS
+    RES -- "total de la reserva (HTTP interno)" --> COT
+    COT -- "precios (HTTP interno)" --> CAT
+    RES -- "calcular / descontar insumos (HTTP interno)" --> INS
     CAT --> PG
+    COT --> PG
+    INS --> PG
     RES --> PG
     RES --> VOL
 ```
@@ -35,7 +46,9 @@ flowchart LR
 | Microservicio | Tabla | Endpoints principales |
 |---|---|---|
 | catalogo-service | `productos` | `GET /api/productos`, `GET /api/productos/{id}`, `POST /api/productos` |
-| reservas-service | `reservas` | `POST /api/cotizacion`, `POST/GET /api/reservas`, `POST/GET /api/reservas/{id}/comprobante`, `PATCH /api/reservas/{id}/validar · rechazar · completar` |
+| cotizacion-service | `tarifas` | `POST /api/cotizacion`, `GET /api/tarifas` |
+| reservas-service | `reservas` | `POST/GET /api/reservas`, `GET /api/reservas/{id}/insumos`, `POST/GET /api/reservas/{id}/comprobante`, `PATCH /api/reservas/{id}/validar · rechazar · completar` |
+| insumos-service | `insumos`, `recetas`, `consumos` | `GET /api/insumos`, `PATCH /api/insumos/{id}/stock`, `POST /api/insumos/calculo`, `POST /api/insumos/consumos` |
 
 ## 2. Arquitectura del proyecto Android (MVVM + Repository)
 
@@ -48,6 +61,7 @@ flowchart TB
         S4[AgendaScreen]
         S5[PerfilScreen]
         S6[PanelAdminScreen]
+        S7[InsumosScreen]
     end
 
     subgraph VMs["ui/viewmodel"]
@@ -56,12 +70,16 @@ flowchart TB
         V3[ReservaViewModel]
         V4[AgendaViewModel]
         V6[AdminViewModel]
+        V7[InsumosViewModel]
     end
 
     subgraph Datos["data/repository"]
         R1[UserRepository]
         R2[ProductoRepository]
         R3[ReservaRepository]
+        R4[CotizacionRepository]
+        R5[InsumoRepository]
+        R6[ExternasRepository]
     end
 
     S1 --> V1 --> R1 --> DAO1[("UserDao → SQLite users")]
@@ -71,9 +89,15 @@ flowchart TB
     R2 --> API1["ProductoApi (Retrofit) → catalogo-service"]
     S3 --> V3 --> R3
     V3 --> R2
+    V3 --> R4 --> API3["CotizacionApi (Retrofit) → cotizacion-service"]
     S4 --> V4 --> R3
     S6 --> V6 --> R3
     R3 --> API2["ReservaApi (Retrofit) → reservas-service"]
+    S7 --> V7 --> R5 --> API4["InsumoApi (Retrofit) → insumos-service"]
+    V3 --> R6
+    V4 --> R6
+    V6 --> R6
+    R6 --> API5["FeriadosApi / CambioApi (Retrofit) → APIs externas"]
 ```
 
 ## 3. Navegación por rol
@@ -91,6 +115,7 @@ flowchart LR
         HOME <--> PERFIL["Perfil"]
     end
     PERFIL -- "cerrar sesión" --> LOGIN
+    ADMIN <--> INSUMOS["Insumos"]
     ADMIN -- "cerrar sesión" --> LOGIN
 ```
 
@@ -112,7 +137,7 @@ stateDiagram-v2
     [*] --> Pendiente: cliente envía la reserva
     Pendiente --> EnRevision: cliente adjunta comprobante
     EnRevision --> EnRevision: cliente cambia comprobante
-    EnRevision --> Pagado50: admin valida
+    EnRevision --> Pagado50: admin valida (se descuentan los insumos; si faltan, no deja)
     EnRevision --> Pendiente: admin rechaza
     Pagado50 --> Completado: admin marca completada
     Completado --> [*]

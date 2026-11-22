@@ -15,6 +15,7 @@ import com.ban.paoliciassweet.model.Sesion
 import com.ban.paoliciassweet.ui.screen.AgendaScreen
 import com.ban.paoliciassweet.ui.screen.BanqueteriaScreen
 import com.ban.paoliciassweet.ui.screen.HomeScreen
+import com.ban.paoliciassweet.ui.screen.InsumosScreen
 import com.ban.paoliciassweet.ui.screen.LoginScreen
 import com.ban.paoliciassweet.ui.screen.PanelAdminScreen
 import com.ban.paoliciassweet.ui.screen.PerfilScreen
@@ -33,6 +34,7 @@ object Routes {
     const val RESERVA = "Reserva"
     const val PERFIL = "Perfil"
     const val ADMIN = "Admin"
+    const val ADMIN_INSUMOS = "Admin/insumos"
 
     const val PRODUCTO = "producto/{id}"
 }
@@ -166,8 +168,18 @@ fun AppNavigation() {
                 RedirigirAlLogin(navController)
             } else {
                 PanelAdminScreen(
-                    onLogout = { conDemora { navController.cerrarSesion() } }
+                    onLogout = { conDemora { navController.cerrarSesion() } },
+                    onVerInsumos = { navController.navigate(Routes.ADMIN_INSUMOS) { launchSingleTop = true } }
                 )
+            }
+        }
+
+        composable(Routes.ADMIN_INSUMOS) {
+            if (!Sesion.esAdmin) {
+                // Solo la administradora puede ver el inventario
+                RedirigirAlLogin(navController)
+            } else {
+                InsumosScreen(onVolver = { navController.popBackStack() })
             }
         }
     }

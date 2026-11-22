@@ -11,6 +11,10 @@ import java.util.Locale
 fun formatoPrecio(monto: Int): String =
     "$" + NumberFormat.getInstance(Locale.forLanguageTag("es-CL")).format(monto)
 
+// 1.5 -> "1,5"   20.0 -> "20"   (cantidades de insumos)
+fun formatoCantidad(valor: Double): String =
+    NumberFormat.getInstance(Locale.forLanguageTag("es-CL")).apply { maximumFractionDigits = 2 }.format(valor)
+
 // Busca el drawable por el nombre guardado en la base. Si no existe, usa "portada".
 @Composable
 fun rememberImagenProducto(nombre: String): Int {
