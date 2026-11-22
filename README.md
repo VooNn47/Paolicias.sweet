@@ -37,7 +37,9 @@ Proyecto del ramo **DSY1105 – Desarrollo de Aplicaciones Móviles** (Duoc UC),
 - **Catálogo** desde `catalogo-service`, con buscador y filtro por categoría. Sin conexión muestra la copia guardada en Room.
 - **Detalle de producto** con *Agregar a mi evento* / *Quitar de mi evento*.
 - **Reserva del evento**: nombre, fecha (solo desde hoy), horario, invitados (1 a 100) y observaciones. Muestra la **cotización** (tarifa + productos + total + abono) calculada por `cotizacion-service` antes de enviar. Vibra cuando el servidor confirma.
-- **Mi Agenda**: sus reservas desde `reservas-service`, ordenadas por fecha, con precio, abono y estado. El precio también se muestra en dólares (API externa ExchangeRate-API).
+  Bajo *Observaciones* aparece un ejemplo en gris (*"Ej: 1 solo pastel de papa"*).
+- **Datos para transferir el abono**: la pantalla de reserva muestra la cuenta de destino y el monto del abono (datos **ficticios**: el proyecto no procesa pagos reales).
+- **Mi Agenda**: sus reservas desde `reservas-service`, ordenadas por fecha, con los productos pedidos, precio, abono y estado. El precio también se muestra en dólares (API externa ExchangeRate-API).
 - **Aviso de feriado**: al elegir la fecha, la app avisa si es feriado en Chile (API externa Nager.Date).
 - **Comprobante** de transferencia con la **cámara** o desde la **galería**; se sube al backend.
 - **Eliminar reserva** desde Mi Agenda, con confirmación (`DELETE /api/reservas/{id}`; el backend borra también el comprobante).
@@ -46,6 +48,7 @@ Proyecto del ramo **DSY1105 – Desarrollo de Aplicaciones Móviles** (Duoc UC),
 ### Administradora
 
 - **Panel de reservas** de todos los clientes, ordenadas por fecha, con filtros *Todas / Pendiente / En revisión / Pagado 50% / Completado*.
+- **Productos pedidos** en cada reserva (por ejemplo *"Pastel de Choclo × 20"*), con las unidades calculadas igual que la cotización.
 - **Revisión del comprobante** (imagen descargada del backend) y abono a validar.
 - **Calcular insumos** de cada reserva antes de aceptarla: muestra cuánto se necesita de cada insumo, cuánto hay y qué falta.
 - **Validar abono**, **Rechazar** o **Marcar como completada**. Al validar se descuentan los insumos del inventario; si falta algo, no deja validar y avisa qué falta.
@@ -122,7 +125,7 @@ com.ban.paoliciassweet
     ├── navigation     AppNavigation (rutas por rol)
     ├── screen         una pantalla por archivo
     ├── theme          colores, tipografía y tema
-    ├── util           Validaciones, Formato
+    ├── util           Validaciones, Formato, ProductosReserva
     └── viewmodel      un ViewModel por pantalla
 ```
 
@@ -147,10 +150,19 @@ Al cerrar sesión se borra el historial de navegación (el botón *Atrás* no vu
 
 ## Cómo ejecutar
 
-1. Levantar el backend (ver su README): `docker compose up -d --build`.
-2. Abrir este proyecto en **Android Studio** y esperar la sincronización de Gradle.
-3. Ejecutar en un **emulador** (Android 8.0 / API 26 o superior). En *debug* la app usa `http://10.0.2.2:8081/` (catálogo), `http://10.0.2.2:8082/` (reservas), `http://10.0.2.2:8083/` (cotización) y `http://10.0.2.2:8084/` (insumos), que en el emulador apuntan al computador.
-4. Registrar un **cliente** con datos ficticios, o la **administradora** con `admin@paolicias.cl`.
+1. Abrir este proyecto en **Android Studio** (rama `main`) y esperar la sincronización de Gradle.
+2. Ejecutar en un **emulador** o teléfono (Android 8.0 / API 26 o superior).
+3. Registrar un **cliente** con datos ficticios, o la **administradora** con `admin@paolicias.cl`.
+
+La app usa el backend desplegado en AWS EC2, configurado en `gradle.properties`:
+
+| Versión | Backend |
+|---|---|
+| *Debug* | `http://54.235.250.79:8081/` (catálogo), `:8082/` (reservas), `:8083/` (cotización) y `:8084/` (insumos) |
+| *Release* (APK firmado) | `https://paolicias.duckdns.org/` (HTTPS con Caddy, una sola dirección para los cuatro servicios) |
+
+Para usar el backend en el computador (`docker compose up -d --build`), quitar las líneas `API_*_DEBUG`:
+la app vuelve a `http://10.0.2.2:808x/`, que en el emulador apunta al computador.
 
 **Cambiar la dirección del backend** sin tocar el código, en `gradle.properties`:
 
@@ -169,6 +181,9 @@ El APK *release* solo permite **HTTPS** (`network_security_config.xml`). El *deb
 ---
 
 ## APK firmado
+
+Versión actual de la app: **1.1** (`versionCode 2`). Para que una versión nueva se instale encima de la anterior,
+hay que firmarla con **la misma llave** y subir `versionCode`.
 
 1. Crear la llave (una sola vez; **no subirla a GitHub**):
    ```
@@ -304,7 +319,7 @@ En **Mi Agenda**: el color del estado cambia gradualmente (`animateColorAsState`
 
 ## Pruebas
 
-- App: `./gradlew testDebugUnitTest`, 13 pruebas: `SeguridadTest` (cifrado de contraseñas) y `ExternasTest` (feriados y dólar).
+- App: `./gradlew testDebugUnitTest`, 18 pruebas: `SeguridadTest` (cifrado de contraseñas, 5), `ExternasTest` (feriados y dólar, 8), `ProductosReservaTest` (productos de cada reserva, 4) y `ExampleUnitTest` (1).
 - Backend: JUnit 5 + Mockito en cada microservicio (`./mvnw test`), 49 pruebas en total (catálogo 8, cotización 8, insumos 11, reservas 22).
 
 ---
@@ -314,6 +329,7 @@ En **Mi Agenda**: el color del estado cambia gradualmente (`animateColorAsState`
 - **Sesión en memoria:** al cerrar la app hay que volver a iniciar sesión.
 - **Login local:** como pide la rúbrica, las cuentas viven en el SQLite de cada teléfono; el backend no autentica las peticiones.
 - **Administradora por correo:** quien registre `admin@paolicias.cl` en su teléfono queda como administradora en ese teléfono.
+- **APK del repositorio:** `app/release/app-release.apk` es la versión 1.0 del 18-nov y apunta a una IP antigua; hay que reemplazarlo por el APK 1.1 firmado.
 - **Archivos antiguos:** `ProductoRemotoScreen.kt`, `ProductoViewModel.kt` (paquete `com.grupo9`), `LineaCotizacion.kt`, `ReservaDao`/`ReservaEntity` y `SaldoDao`/`SaldoEntity` ya no se usan y se pueden borrar.
 
 ---
