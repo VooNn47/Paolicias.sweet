@@ -52,6 +52,7 @@ import com.ban.paoliciassweet.ui.theme.Burdeos
 import com.ban.paoliciassweet.ui.theme.MarronSuave
 import com.ban.paoliciassweet.ui.util.formatoCantidad
 import com.ban.paoliciassweet.ui.util.formatoPrecio
+import com.ban.paoliciassweet.ui.util.textoProductos
 import com.ban.paoliciassweet.ui.viewmodel.AdminViewModel
 import com.ban.paoliciassweet.util.Notificaciones
 
@@ -206,6 +207,10 @@ private fun TarjetaAdmin(
                 )
             }
             Text("Invitados: ${reserva.invitados}")
+            Text(
+                "Productos: ${textoProductos(reserva.productos, reserva.invitados, viewModel.catalogo)}",
+                fontWeight = FontWeight.SemiBold
+            )
             if (!reserva.observaciones.isNullOrBlank()) {
                 Text("Observaciones: ${reserva.observaciones}")
             }

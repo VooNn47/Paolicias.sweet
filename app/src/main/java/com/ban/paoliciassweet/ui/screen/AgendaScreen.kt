@@ -67,6 +67,7 @@ import com.ban.paoliciassweet.ui.theme.BlancoHueso
 import com.ban.paoliciassweet.ui.theme.Burdeos
 import com.ban.paoliciassweet.ui.theme.MarronSuave
 import com.ban.paoliciassweet.ui.util.formatoPrecio
+import com.ban.paoliciassweet.ui.util.textoProductos
 import com.ban.paoliciassweet.ui.viewmodel.AgendaViewModel
 import com.ban.paoliciassweet.util.Externas
 import java.io.File
@@ -228,6 +229,7 @@ fun AgendaScreen(
                             },
                             onCamara = { abrirCamara(reserva.id) },
                             tasaDolar = agendaViewModel.tasaDolar,
+                            productos = textoProductos(reserva.productos, reserva.invitados, agendaViewModel.catalogo),
                             eliminando = agendaViewModel.eliminando == reserva.id,
                             onEliminar = { reservaAEliminar = reserva }
                         )
@@ -273,6 +275,7 @@ private fun TarjetaReserva(
     onGaleria: () -> Unit,
     onCamara: () -> Unit,
     tasaDolar: Double? = null,
+    productos: String? = null,
     eliminando: Boolean = false,
     onEliminar: () -> Unit = {}
 ) {
@@ -310,6 +313,7 @@ private fun TarjetaReserva(
             Text(text = "Fecha: ${reserva.fecha}", fontSize = 15.sp)
             Text(text = "Horario: ${reserva.horario}", fontSize = 15.sp)
             Text(text = "Invitados: ${reserva.invitados}", fontSize = 15.sp)
+            productos?.let { Text(text = "Productos: $it", fontSize = 15.sp) }
             if (!reserva.observaciones.isNullOrBlank()) {
                 Text(text = "Observaciones: ${reserva.observaciones}", fontSize = 15.sp)
             }

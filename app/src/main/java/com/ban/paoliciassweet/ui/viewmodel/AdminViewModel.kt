@@ -8,7 +8,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.ban.paoliciassweet.data.local.database.AppDatabase
+import com.ban.paoliciassweet.data.local.entity.ProductoEntity
 import com.ban.paoliciassweet.data.repository.ExternasRepository
+import com.ban.paoliciassweet.data.repository.ProductoRepository
 import com.ban.paoliciassweet.data.repository.ReservaRepository
 import com.ban.paoliciassweet.model.CalculoInsumos
 import com.ban.paoliciassweet.model.EstadoAbono
@@ -64,6 +67,20 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val repositorio = ReservaRepository()
+
+    // Catálogo por id, para mostrar qué productos pidió el cliente en cada reserva
+    var catalogo by mutableStateOf<Map<Int, ProductoEntity>>(emptyMap())
+        private set
+
+    private val productoRepositorio = ProductoRepository(AppDatabase.getDatabase(application).productoDao())
+
+    init {
+        // Room tiene la copia local del catálogo; se actualiza con catalogo-service
+        viewModelScope.launch {
+            productoRepositorio.obtenerTodos().collect { lista -> catalogo = lista.associateBy { it.id } }
+        }
+        viewModelScope.launch { productoRepositorio.sincronizar() }
+    }
 
     // Pregunta a reservas-service (que consulta a insumos-service) si alcanza el inventario
     fun calcularInsumos(id: Long) {
